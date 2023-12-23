@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   :components ((:file "aux-package")
                (:module "transport"
                 :components ((:file "package")
+                             (:file "protocol-variables")
                              (:file "protocol-generics")
                              (:file "protocol-types")
                              (:file "protocol-functions")

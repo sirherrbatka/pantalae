@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric send-message (controler nest message))
 (defgeneric send-data (controler channel data))
 (defgeneric receive-data (controler channel))
+(defgeneric yield-channel (controler channel-group timeout))
 (defgeneric handle-received-message (controler payload nest message))
 (defgeneric message-payload (message))
 (defgeneric close-channel (controler channel))

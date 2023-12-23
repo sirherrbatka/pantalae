@@ -20,21 +20,31 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-
 (cl:in-package #:pantalea.transport.protocol)
 
 
+(defclass fundamental-nest ()
+  ((%channels
+    :initarg :channels
+    :accessor channels)
+   (%peers
+    :initarg :peers
+    :accessor peers)
+   (%cryptography
+    :initarg :cryptography
+    :accessor cryptography)))
+
 (defclass fundamental-message ()
-  ((%day ; 32 bits
+  ((%day                                ; 32 bits
     :initarg :day
     :accessor day)
-   (%sec ; 32 bits
+   (%sec                                ; 32 bits
     :initarg :sec
     :accessor sec)
-   (%nsec ; 32 bits
+   (%nsec                               ; 32 bits
     :initarg :nsec
     :accessor nsec)
-   (%id ; 32 bits
+   (%id                                 ; 32 bits
     :initarg :id
     :reader message-id
     :accessor id)
@@ -48,15 +58,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass channel-group ()
   ((%channels
     :initarg :channels
-    :accessor channels)))
+    :reader channel-group-channels)
+   (%nest
+    :initarg :nest
+    :reader channel-group-nest)))
 
-(defclass channel ()
+(defclass fundamental-channel ()
   ((%group
     :initarg :group
     :reader channel-group)
-   (%service-name
-    :initarg :service-name
-    :reader channel-service-name)
    (%port-number
     :initarg :port-number
     :reader channel-port-number)
