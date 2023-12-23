@@ -20,26 +20,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
+(cl:in-package #:pantalea.transport.protocol)
 
-(asdf:defsystem pantalea
-  :name "pantalea"
-  :license "BSD simplified"
-  :description "P2P network layer for Common Lisp"
-  :serial T
-  :pathname "source"
-  :depends-on ( #:iterate    #:metabang-bind
-                #:serapeum   #:bordeaux-threads
-                #:usocket    #:alexandria
-                #:ironclad   #:cl-conspack
-                #:local-time)
-  :components ((:file "aux-package")
-               (:module "transport"
-                :components ((:file "package")
-                             (:file "protocol-generics")
-                             (:file "protocol-types")
-                             (:file "protocol-functions")
-                             (:file "protocol-serialization")
-                             (:file "skip-list")
-                             (:file "implementation-functions.lisp")
-                             ))
-               ))
+
+(conspack:defencoding fundamental-message
+  %day %sec %nsec %id %payload)
