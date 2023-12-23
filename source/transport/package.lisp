@@ -35,6 +35,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:message-id
    #:send-message
    #:handle-received-message
+   #:channel-peer
+   #:channel-service-name
+   #:channel-port-number
    #:opened-message<-enveloped-message
    #:enveloped-message<-opened-message))
 

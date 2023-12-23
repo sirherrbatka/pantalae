@@ -43,7 +43,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :reader message-payload
     :accessor payload))
   (:default-initargs
-   :id (random 2147483648))) ; max 32 bit long value Sat Dec 23 18:04:45 2023
+   :id (random most-positive-fixnum)))
+
+(defclass channel ()
+  ((%service-name
+    :initarg :service-name
+    :reader channel-service-name
+    :accessor service-name)
+   (%port-number
+    :initarg :port-number
+    :reader channel-port-number
+    :accessor port-number)
+   (%peer
+    :initarg :peer
+    :reader channel-peer
+    :accessor peer)))
 
 (defclass enveloped-message (fundamental-message)
   ((%destination-public-key
