@@ -34,10 +34,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:message-seen-p
    #:message-id
    #:send-message
+   #:send-data
+   #:receive-data
    #:handle-received-message
    #:channel-peer
    #:channel-service-name
    #:channel-port-number
+   #:channel-nest
    #:opened-message<-enveloped-message
    #:enveloped-message<-opened-message))
 

@@ -45,19 +45,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :id (random most-positive-fixnum)))
 
+(defclass channel-group ()
+  ((%channels
+    :initarg :channels
+    :accessor channels)))
+
 (defclass channel ()
-  ((%service-name
+  ((%group
+    :initarg :group
+    :reader channel-group)
+   (%service-name
     :initarg :service-name
-    :reader channel-service-name
-    :accessor service-name)
+    :reader channel-service-name)
    (%port-number
     :initarg :port-number
-    :reader channel-port-number
-    :accessor port-number)
+    :reader channel-port-number)
+   (%nest
+    :initarg :nest
+    :reader channel-nest)
    (%peer
     :initarg :peer
-    :reader channel-peer
-    :accessor peer)))
+    :reader channel-peer)))
 
 (defclass enveloped-message (fundamental-message)
   ((%destination-public-key
