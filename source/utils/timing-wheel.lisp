@@ -122,13 +122,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun run (size tick-duration)
   (lret ((timing-wheel (make-timing-wheel size tick-duration)))
-    (setf (thread timing-wheel)
-          (bt:make-thread (lambda (&aux (sleep-duration (/ (tick-duration timing-wheel)
-                                                      1000.0)))
-                            (iterate
-                              (tick! timing-wheel)
-                              (sleep sleep-duration)))
-                          :name "Timer wheel thread"))))
+    (let ((sleep-duration (/ (tick-duration timing-wheel)
+                             1000.0)))
+      (setf (thread timing-wheel)
+            (bt:make-thread (lambda ()
+                              (iterate
+                                (tick! timing-wheel)
+                                (sleep sleep-duration)))
+                            :name "Timer wheel thread")))))
 
 (defun add! (timing-wheel delay callback)
   (bind ((tick-duration (tick-duration timing-wheel))
