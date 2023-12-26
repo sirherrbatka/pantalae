@@ -23,6 +23,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
-(alexandria:define-constant +type-message+ 0)
-(alexandria:define-constant +type-handshake+ 1)
-(alexandria:define-constant +type-stream+ 2)
+(alexandria:define-constant +type-gossip+ 0)
+(alexandria:define-constant +type-ping+ 1)
+(alexandria:define-constant +type-route-discovery+ 2)
+(alexandria:define-constant +type-data+ 3)

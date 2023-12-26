@@ -92,8 +92,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   callback
   (remaining-rounds 0 :type fixnum))
 
-(defun task-run! (task)
-  (funcall (task-callback task)))
+(defun task-run! (task timing-wheel)
+  (funcall (task-callback task) timing-wheel))
 
 (defun tick! (timing-wheel)
   (declare (optimize (speed 3) (safety 0)))
@@ -108,7 +108,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (for task = (queue-pop! bucket))
       (until (null task))
       (if (<= (task-remaining-rounds task) 0)
-          (task-run! task)
+          (task-run! task timing-wheel)
           (progn
             (decf (task-remaining-rounds task))
             (push task pending-tasks))))

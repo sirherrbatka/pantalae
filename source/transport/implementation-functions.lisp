@@ -23,9 +23,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defun message-signature (message)
-  (cons (p:message-timestamp message)
-        (p:message-id message)))
+(defun gossip-signature (gossip)
+  (cons (p:gossip-timestamp message)
+        (p:gossip-id message)))
 
 (defun signature< (a b)
   (bind (((timestamp-a . id-a) a)

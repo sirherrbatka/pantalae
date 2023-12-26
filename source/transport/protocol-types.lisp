@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :private-key
     :accessor private-key)))
 
-(defclass fundamental-message ()
+(defclass fundamental-gossip ()
   ((%day                                ; 32 bits
     :initarg :day
     :accessor day)
@@ -68,44 +68,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor nsec)
    (%id                                 ; 32 bits
     :initarg :id
-    :reader message-id
+    :reader gossip-id
     :accessor id)
-   (%forward-route
-    :initarg :forward-route
-    :reader message-forward-route
-    :accessor forward-route)
-   (%backward-route
-    :initarg :backward-route
-    :reader message-backward-route
-    :accessor backward-route)
    (%payload
     :initarg :payload
-    :reader message-payload
+    :reader gossip-payload
     :accessor payload))
   (:default-initargs
    :id (random most-positive-fixnum)
    :forward-route '()
    :backward-route '()))
 
+(defclass route-discovery ()
+  ((%destination-public-key
+    :initarg :destination-public-key
+    :accessor destination-public-key
+    :reader route-discovery-destination-public-key)
+   (%forward-route
+    :initarg :forward-route
+    :reader route-discovery-forward-route
+    :accessor forward-route)
+   (%backward-route
+    :initarg :backward-route
+    :reader route-discovery-backward-route
+    :accessor backward-route)
+   (%palyoad
+    :initarg :palyoad
+    :reader route-discovery-payload
+    :accessor palyoad)))
+
 (defclass fundamental-payload ()
   ())
-
-(defclass connection-request-payload (fundamental-payload)
-  ((%id
-    :initarg :id
-    :accessor id)
-   (%salt
-    :initarg :salt
-    :accessor salt)
-   (%service-name
-    :initarg :service-name
-    :accessor service-name)
-   (%public-key
-    :initarg :public-key
-    :accessor public-key))
-  (:default-initargs
-   :id (random most-positive-fixnum)
-   :salt (ironclad:make-random-salt)))
 
 (defclass channels-group ()
   ((%channels
@@ -131,13 +124,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :peer
     :reader channel-peer)))
 
-(defclass enveloped-message (fundamental-message)
+(defclass enveloped-gossip (fundamental-gossip)
   ((%destination-public-key
     :initarg :destination-public-key
-    :reader enveloped-message-destination-public-key
+    :reader enveloped-gossip-destination-public-key
     :accessor destination-public-key))
   (:default-initargs))
 
-(defclass opened-message (fundamental-message)
+(defclass opened-gossip (fundamental-gossip)
   ()
   (:default-initargs))

@@ -24,23 +24,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames)
   (:export
-   #:message-timestamp
-   #:message-id
-   #:enveloped-message-destination-public-key
-   #:message-payload
+   #:gossip-timestamp
+   #:gossip-id
+   #:enveloped-gossip-destination-public-key
+   #:gossip-payload
    #:for-me-p
    #:peers
-   #:message-seen-p
-   #:message-id
-   #:send-message
+   #:gossip-seen-p
+   #:gossip-id
+   #:send-gossip
    #:send-data
    #:receive-data
-   #:handle-received-message
+   #:handle-received-gossip
    #:channel-peer
    #:channel-port-number
    #:channel-nest
-   #:opened-message<-enveloped-message
-   #:enveloped-message<-opened-message))
+   #:opened-message<-enveloped-gossip
+   #:enveloped-message<-opened-gossip))
 
 
 (cl:defpackage #:pantalea.transport
