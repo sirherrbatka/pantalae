@@ -20,8 +20,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-
-(cl:in-package #:pantalea.transport.skip-list)
+(cl:in-package #:pantalea.utils.skip-list)
 
 
 (defstruct skip-list-node
@@ -237,7 +236,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setf (aref head i) skip-list-node)
         (finish))))
 
-(defun skip-list-insert! (structure location)
+(defun insert! (structure location)
   (bind ((pointers (read-pointers structure))
          (test (read-ordering-function structure))
          ((:values current prev)
@@ -273,7 +272,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (setf node next)
              (go start))))))
 
-(defun skip-list-drop! (structure location)
+(defun drop! (structure location)
   (bind ((pointers (read-pointers structure))
          (test (read-ordering-function structure))
          (current (locate-node pointers location test))

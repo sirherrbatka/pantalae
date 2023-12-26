@@ -20,7 +20,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-
 (asdf:defsystem pantalea
   :name "pantalea"
   :license "BSD simplified"
@@ -33,14 +32,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:ironclad   #:cl-conspack
                 #:local-time)
   :components ((:file "aux-package")
+               (:module "utils"
+                :components ((:file "packages")
+                             (:file "skip-list")
+                             (:file "timing-wheel")))
                (:module "transport"
-                :components ((:file "package")
+                :components ((:file "packages")
                              (:file "protocol-variables")
                              (:file "protocol-generics")
                              (:file "protocol-types")
                              (:file "protocol-functions")
                              (:file "protocol-serialization")
-                             (:file "skip-list")
                              (:file "implementation-functions.lisp")
                              ))
                ))

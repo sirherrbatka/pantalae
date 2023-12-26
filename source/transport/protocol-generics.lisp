@@ -20,7 +20,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-
 (cl:in-package #:pantalea.transport.protocol)
 
 
@@ -30,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric send-message (controler nest message))
 (defgeneric send-data (controler channel data))
 (defgeneric receive-data (controler channel))
+(defgeneric connect (controler channel-group peer))
 (defgeneric yield-channel (controler channel-group timeout))
 (defgeneric handle-received-message (controler payload nest message))
 (defgeneric message-payload (message))
@@ -38,3 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric enveloped-message-destination-public-key (enveloped-message))
 (defgeneric opened-message<-enveloped-message (enveloped-message own-private-key))
 (defgeneric enveloped-message<-opened-message (opened-message destination-public-key))
+(defgeneric message-forward-route (message))
+(defgeneric message-backward-route (message))
+(defgeneric peer-routes (peer))
+(defgeneric discover-routes (peer))

@@ -20,11 +20,33 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport.protocol)
+(cl:defpackage #:pantalea.transport.protocol
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:message-timestamp
+   #:message-id
+   #:enveloped-message-destination-public-key
+   #:message-payload
+   #:for-me-p
+   #:peers
+   #:message-seen-p
+   #:message-id
+   #:send-message
+   #:send-data
+   #:receive-data
+   #:handle-received-message
+   #:channel-peer
+   #:channel-port-number
+   #:channel-nest
+   #:opened-message<-enveloped-message
+   #:enveloped-message<-opened-message))
 
 
-(conspack:defencoding fundamental-message
-  %day %sec %nsec %id %payload %forward-route %backward-route)
-
-(conspack:defencoding connection-request-payload
-  %id %salt %service-name %public-key)
+(cl:defpackage #:pantalea.transport
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames
+   (#:p #:pantalea.transport.protocol)
+   (#:sk #:pantalea.utils.skip-list))
+  (:export
+   ))
