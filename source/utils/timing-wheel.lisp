@@ -122,8 +122,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun run (size tick-duration)
   (lret ((timing-wheel (make-timing-wheel size tick-duration)))
-    (let ((sleep-duration (/ (tick-duration timing-wheel)
-                             1000.0)))
+    (let ((sleep-duration (/ tick-duration 1000.0)))
       (setf (thread timing-wheel)
             (bt:make-thread (lambda ()
                               (iterate
