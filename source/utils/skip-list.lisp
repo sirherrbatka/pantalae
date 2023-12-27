@@ -32,14 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (declare (optimize (speed 3) (debug 0) (safety 0)))
   (~> skip-list-node skip-list-node-pointers length))
 
-(-> skip-list-node-at (skip-list-node cl-ds.utils:index) t)
 (defun skip-list-node-at (skip-list-node index)
   (declare (optimize (speed 3) (debug 0) (safety 0)))
   (~> skip-list-node skip-list-node-pointers (aref index)))
 
-(-> (setf skip-list-node-at)
-    ((or null skip-list-node) skip-list-node cl-ds.utils:index)
-    (or null skip-list-node))
 (defun (setf skip-list-node-at) (new-value skip-list-node index)
   (declare (optimize (speed 3) (debug 0) (safety 0)))
   (setf (aref (skip-list-node-pointers skip-list-node) index) new-value))
@@ -76,11 +72,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (declaim (inline skip-list-node-compare))
 (defun skip-list-node-compare (test node1 node2)
   (declare (optimize (speed 3) (debug 0) (safety 0)))
-  (cl-ds.utils:cond+ ((null node1) (null node2))
-    ((t t) nil)
-    ((nil t) t)
-    ((t nil) nil)
-    ((nil nil) (funcall test
+  (if (null node1)
+      nil
+      (if (null node2)
+          t
+          (funcall test
                         (skip-list-node-content node1)
                         (skip-list-node-content node2)))))
 
@@ -249,9 +245,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (read-ordering-function structure)
          new-node)
         (skip-list-update-head-pointers-after-insert! structure new-node)
-        (return-from skip-list-insert! t)))
+        (return-from insert! t)))
     (bind ((content (skip-list-node-content result))
-           (found (~> structure cl-ds.common.skip-list:access-test-function
+           (found (~> structure access-test-function
                       (funcall content location))))
       (if found
           nil
@@ -279,7 +275,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (maximum-level (access-maximum-level structure))
          (result (aref current 0)))
     (when (null result)
-      (return-from skip-list-drop! nil))
+      (return-from drop! nil))
     (copy-into! pointers current)
     (iterate
       (with n = result)

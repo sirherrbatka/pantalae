@@ -40,3 +40,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric enveloped-gossip<-opened-gosspi (opened-gossip destination-public-key))
 (defgeneric peer-routes (peer))
 (defgeneric discover-routes (peer))
+(defgeneric route-discovery-decrypt-payload (route-discovery private-key))
+(defgeneric route-discovery-encrypt-payload (route-discovery public-key))
