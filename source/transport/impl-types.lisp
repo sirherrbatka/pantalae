@@ -145,7 +145,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (p:event-loop-schedule* nest promise)))
   promise)
 
-(alexandria:define-constant +timing-wheel-size+ 256)
+(alexandria:define-constant +timing-wheel-size+ 512)
 (alexandria:define-constant +timing-wheel-tick-duration+ 50)
 
 (defmethod p:nest-start ((nest nest-implementation))
