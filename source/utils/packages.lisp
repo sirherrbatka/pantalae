@@ -57,4 +57,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:fullfilledp
    #:force!
    #:promise
+   #:combine
    #:make-promise))
+
+(cl:defpackage #:pantalea.utils.conditions
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:stop-thread))

@@ -45,6 +45,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric event-loop-schedule* (nest promise))
 (defgeneric timer-schedule* (nest delay promise))
 (defgeneric handle-incoming-packet (nest packet))
+(defgeneric nest-stop (nest))
+(defgeneric nest-start (nest))
 (defgeneric force (promise)
   (:method ((future t))
     future))

@@ -24,6 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defclass promise ()
+  ())
+
+(defclass single-promise (promise)
   ((%lock
     :initarg :lock
     :accessor lock)
@@ -40,23 +43,40 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :fullfilled
     :accessor fullfilled)))
 
-(defun force! (promise)
-  (if (typep promise 'promise)
-      (bind (((:accessors lock cvar result fullfilled) promise))
-        (bt:with-lock-held (lock)
-          (iterate
-            (until fullfilled)
-            (bt:condition-wait cvar lock)
-            (finally (return-from force! result)))))
-      promise))
+(defclass combined-promise (promise)
+  ((%content
+    :initarg :content
+    :accessor content)))
 
-(defun fullfilledp (promise)
-  (if (typep promise 'promise)
-      (bt:with-lock-held ((lock promise))
-        (fullfilledp promise))
-      t))
+(defgeneric force! (promise)
+  (:method ((promise t))
+    promise))
 
-(defun fullfill! (promise)
+(defmethod force! ((promise single-promise))
+  (bind (((:accessors lock cvar result fullfilled) promise))
+    (bt:with-lock-held (lock)
+      (iterate
+        (until fullfilled)
+        (bt:condition-wait cvar lock)
+        (finally (return-from force! result))))))
+
+(defmethod force! ((promise combined-promise))
+  (map 'list #'force! (content promise)))
+
+(defgeneric fullfilledp (promise)
+  (:method ((promise t))
+    t))
+
+(defmethod fullfilledp ((promise single-promise))
+  (bt:with-lock-held ((lock promise))
+    (fullfilled promise)))
+
+(defmethod fullfilledp ((promise combined-promise))
+  (every #'fullfilledp (content promise)))
+
+(defgeneric fullfill! (promise))
+
+(defmethod fullfill! ((promise single-promise))
   (bind (((:accessors lock cvar callback result fullfilled) promise))
     (bt:with-lock-held (lock)
       (when fullfilled
@@ -65,6 +85,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             fullfilled t)
       (bt:condition-notify cvar)
       result)))
+
+(defmethod fullfill! ((promise combined-promise))
+  (map nil #'fullfill! (content promise)))
 
 (defun make-promise (callback)
   (make 'promise
@@ -76,3 +99,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmacro promise (&body body)
   `(make-promise (lambda () ,@body)))
+
+(defun combine (promises)
+  (check-type promises sequence)
+  (make 'combined-promise
+        :content promises))

@@ -33,23 +33,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%terminating
     :initarg :terminating
     :accessor terminating)
+   (%total-bytes
+    :initarg :total-bytes
+    :accessor total-bytes)
+   (%start-time
+    :initarg :start-time
+    :accessor start-time)
    (%lock
     :initarg :lock
     :accessor lock))
   (:default-initargs
+   :socket nil
+   :thread nil
+   :total-bytes 0
+   :start-time nil
    :terminating nil))
 
 (defun run-socket-bundle (bundle nest)
   (setf (thread bundle)
         (bt:make-thread
          (lambda ()
+           (setf (start-time bundle) (local-time:now))
            (iterate
              (with length = nil)
              (with socket = (socket bundle))
              (with lock = (lock bundle))
              (with buffer = nil)
              (with start = 0)
-             (for terminating = (terminating bundle))
+             (for terminating = (bt:with-lock-held (lock)
+                                  (terminating bundle)))
              (when terminating
                (promise:fullfill! terminating)
                (usocket:socket-close socket)
@@ -81,6 +93,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                        (promise:promise
                                          (p:handle-incoming-packet nest
                                                                    buffer)))
+               (incf (total-bytes bundle) length)
                (setf start 0 length nil buffer nil)))))))
 
 (defclass networking ()
@@ -100,8 +113,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor event-loop-queue)
    (%event-loop-thread
     :initarg :event-loop-thread
-    :accessor event-loop-thread))
+    :accessor event-loop-thread)
+   (%started
+    :initarg :started
+    :accessor started))
   (:default-initargs
+   :started nil
    :event-loop-queue (q:make-blocking-queue)))
 
 (defun run-event-loop (nest)
@@ -122,3 +139,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (lambda (tw) (declare (ignore tw))
              (p:event-loop-schedule* nest promise)))
   promise)
+
+(defmethod p:nest-stop ((nest nest-implementation))
+  (unless (started nest)
+    (return-from p:nest-stop nil))
+  (~> nest
+      networking
+      socket-bundles
+      (map 'list (lambda (bundle)
+                   (bt:with-lock-held ((lock bundle))
+                     (setf (terminating bundle) (promise:promise t)))))
+      promise:combine
+      (list _ (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
+      promise:combine
+      (p:event-loop-schedule* nest _)
+      promise:force!))

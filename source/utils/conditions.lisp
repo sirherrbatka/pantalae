@@ -20,46 +20,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:defpackage #:pantalea.transport.protocol
-  (:use #:common-lisp #:pantalea.aux-package)
-  (:local-nicknames)
-  (:export
-   #:gossip-timestamp
-   #:gossip-id
-   #:enveloped-gossip-destination-public-key
-   #:gossip-payload
-   #:for-me-p
-   #:handle-incoming-packet
-   #:peers
-   #:gossip-seen-p
-   #:gossip-id
-   #:event-loop-schedule*
-   #:timer-schedule*
-   #:completedp
-   #:send-gossip
-   #:send-data
-   #:receive-data
-   #:handle-received-gossip
-   #:fundamental-nest
-   #:channel-peer
-   #:channel-port-number
-   #:channel-nest
-   #:opened-message<-enveloped-gossip
-   #:force
-   #:fullfill
-   #:nest-stop
-   #:nest-start
-   #:make-promise*
-   #:enveloped-message<-opened-gossip))
+(cl:in-package #:pantalea.utils.conditions)
 
 
-(cl:defpackage #:pantalea.transport
-  (:use #:common-lisp #:pantalea.aux-package)
-  (:local-nicknames
-   (#:p #:pantalea.transport.protocol)
-   (#:q #:pantalea.utils.queue)
-   (#:promise #:pantalea.utils.promise)
-   (#:tw #:pantalea.utils.timing-wheel)
-   (#:sk #:pantalea.utils.skip-list))
-  (:export
-   ))
+(define-condition stop-thread ()
+  ())
