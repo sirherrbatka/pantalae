@@ -32,14 +32,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peers
    #:gossip-seen-p
    #:gossip-id
+   #:event-loop-schedule*
+   #:timer-schedule*
+   #:completedp
    #:send-gossip
    #:send-data
    #:receive-data
    #:handle-received-gossip
+   #:fundamental-nest
    #:channel-peer
    #:channel-port-number
    #:channel-nest
    #:opened-message<-enveloped-gossip
+   #:force
+   #:fullfill
+   #:make-promise*
    #:enveloped-message<-opened-gossip))
 
 
@@ -47,6 +54,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
    (#:p #:pantalea.transport.protocol)
+   (#:q #:pantalea.utils.queue)
+   (#:tw #:pantalea.utils.timing-wheel)
    (#:sk #:pantalea.utils.skip-list))
   (:export
    ))

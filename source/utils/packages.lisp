@@ -20,6 +20,19 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
+(cl:defpackage #:pantalea.utils.queue
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:make-queue
+   #:make-blocking-queue
+   #:queue-push/no-lock!
+   #:queue-pop/no-lock!
+   #:queue-push!
+   #:queue-pop!
+   #:blocking-queue-push!
+   #:blocking-queue-pop!))
+
 (cl:defpackage #:pantalea.utils.skip-list
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames)
@@ -30,7 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (cl:defpackage #:pantalea.utils.timing-wheel
   (:use #:common-lisp #:pantalea.aux-package)
-  (:local-nicknames)
+  (:local-nicknames
+   (#:q #:pantalea.utils.queue))
   (:export
    #:run
    #:add!))

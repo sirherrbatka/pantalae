@@ -22,45 +22,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 (cl:in-package #:pantalea.utils.timing-wheel)
 
-(defclass queue ()
-  ((%head
-    :initarg :head
-    :accessor head)
-   (%lock
-    :initarg :lock
-    :accessor lock)
-   (%tail
-    :initarg :tail
-    :accessor tail)))
-
-(defun make-queue ()
-  (make 'queue :lock (bt:make-lock)
-               :head nil
-               :tail nil))
-
-(defun queue-push/no-lock! (queue value)
-  (let ((new (cons value nil)))
-      (if (head queue)
-          (setf (cdr (tail queue)) new)
-          (setf (head queue) new))
-      (setf (tail queue) new))
-  nil)
-
-(defun queue-push! (queue value)
-  (bt:with-lock-held ((lock queue))
-    (queue-push/no-lock! queue value))
-  nil)
-
-(defun queue-pop! (queue)
-  (bt:with-lock-held ((lock queue))
-    (let ((node (head queue)))
-      (if node
-          (prog1 (car node)
-            (when (null (setf (head queue) (cdr node)))
-              (setf (tail queue) nil))
-            (setf (car node) nil
-                  (cdr node) nil))
-          nil))))
 
 (defclass timing-wheel ()
   ((%tick-duration
@@ -86,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (assert (> tick-duration 0))
   (make 'timing-wheel
         :tick-duration tick-duration
-        :buckets (map-into (make-array size) #'make-queue)))
+        :buckets (map-into (make-array size) #'q:make-queue)))
 
 (defstruct task
   callback
@@ -105,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (type list pending-tasks)
              (type fixnum wheel-pointer))
     (iterate
-      (for task = (queue-pop! bucket))
+      (for task = (q:queue-pop! bucket))
       (until (null task))
       (if (<= (task-remaining-rounds task) 0)
           (task-run! task timing-wheel)
@@ -115,7 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (bt:with-lock-held ((lock bucket))
       (iterate
         (for task in pending-tasks)
-        (queue-push/no-lock! bucket task)))
+        (q:queue-push/no-lock! bucket task)))
     (bt:with-lock-held ((lock timing-wheel))
       (setf (wheel-pointer timing-wheel)
             (mod (1+ wheel-pointer) (length buckets))))))
@@ -140,6 +101,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           ticks)
                        size)))
     (declare (type simple-vector buckets))
-    (queue-push! (aref buckets pointer)
-                 (make-task :callback callback
-                            :remaining-rounds (truncate ticks size)))))
+    (q:queue-push! (aref buckets pointer)
+                   (make-task :callback callback
+                              :remaining-rounds (truncate ticks size)))))

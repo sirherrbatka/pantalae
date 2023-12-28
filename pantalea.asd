@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (:module "utils"
                 :components ((:file "packages")
                              (:file "skip-list")
+                             (:file "queue")
                              (:file "timing-wheel")))
                (:module "transport"
                 :components ((:file "packages")
@@ -44,5 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "protocol-functions")
                              (:file "protocol-serialization")
                              (:file "impl-functions")
+                             (:file "impl-types")
                              ))
                ))
