@@ -48,3 +48,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:export
    #:run
    #:add!))
+
+(cl:defpackage #:pantalea.utils.promise
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:fullfill!
+   #:fullfilledp
+   #:force!
+   #:promise
+   #:make-promise))

@@ -26,17 +26,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   :description "P2P network layer for Common Lisp"
   :serial T
   :pathname "source"
-  :depends-on ( #:iterate    #:metabang-bind
-                #:serapeum   #:bordeaux-threads
-                #:usocket    #:alexandria
-                #:ironclad   #:cl-conspack
-                #:local-time)
+  :depends-on ( #:iterate  #:metabang-bind
+                #:serapeum #:bordeaux-threads
+                #:usocket  #:alexandria
+                #:ironclad #:cl-conspack
+                #:nibbles  #:local-time)
   :components ((:file "aux-package")
                (:module "utils"
                 :components ((:file "packages")
                              (:file "skip-list")
                              (:file "queue")
-                             (:file "timing-wheel")))
+                             (:file "timing-wheel")
+                             (:file "promise")))
                (:module "transport"
                 :components ((:file "packages")
                              (:file "protocol-variables")

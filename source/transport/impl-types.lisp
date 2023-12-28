@@ -23,50 +23,70 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defclass future ()
-  ((%lock
+(defclass socket-bundle ()
+  ((%socket
+    :initarg :socket
+    :accessor socket)
+   (%thread
+    :initarg :thread
+    :accessor thread)
+   (%terminating
+    :initarg :terminating
+    :accessor terminating)
+   (%lock
     :initarg :lock
-    :accessor lock)
-   (%cvar
-    :initarg :cvar
-    :accessor cvar)
-   (%callback
-    :initarg :callback
-    :accessor callback)
-   (%result
-    :initarg :result
-    :accessor result)
-   (%completed
-    :initarg :completed
-    :reader p:completedp
-    :accessor completed)))
+    :accessor lock))
+  (:default-initargs
+   :terminating nil))
 
-(defmethod p:force ((future future))
-  (bind (((:accessors lock cvar result completed) future))
-    (bt:with-lock-held (lock)
-      (iterate
-        (until completed)
-        (bt:condition-wait cvar lock)
-        (finally (return-from p:force result))))))
-
-(defmethod p:completedp ((future future))
-  (bt:with-lock-held ((lock future))
-    (completed future)))
-
-(defun p:fullfill (future)
-  (bind (((:accessors lock cvar callback result completed) future))
-    (bt:with-lock-held (lock)
-      (when completed
-        (return-from p:fullfill result))
-      (setf result (funcall callback)
-            completed t)
-      (bt:condition-notify cvar)
-      result)))
+(defun run-socket-bundle (bundle nest)
+  (setf (thread bundle)
+        (bt:make-thread
+         (lambda ()
+           (iterate
+             (with length = nil)
+             (with socket = (socket bundle))
+             (with lock = (lock bundle))
+             (with buffer = nil)
+             (with start = 0)
+             (for terminating = (terminating bundle))
+             (when terminating
+               (promise:fullfill! terminating)
+               (usocket:socket-close socket)
+               (leave))
+             (for r-socket = (usocket:wait-for-input socket :timeout 0.5))
+             (when (null r-socket) (next-iteration))
+             (if (null length)
+                 (bt:with-lock-held (lock)
+                   (setf length (~> socket
+                                    usocket:socket-stream
+                                    nibbles:read-ub32/be)))
+                 (progn
+                   (when (null buffer)
+                     (setf buffer (make-array length :element-type '(unsigned-byte 8))))
+                   (bind ((new-size (- length start))
+                          (buffer-view (make-array new-size
+                                                   :displaced-to buffer
+                                                   :element-type '(unsigned-byte 8)
+                                                   :displaced-index-offset start))
+                          ((:values buffer size host port)
+                           (bt:with-lock-held (lock)
+                             (usocket:socket-receive socket
+                                                     buffer-view
+                                                     new-size))))
+                     (declare (ignorable buffer host port))
+                     (incf start size))))
+             (when (= start length)
+               (p:event-loop-schedule* nest
+                                       (promise:promise
+                                         (p:handle-incoming-packet nest
+                                                                   buffer)))
+               (setf start 0 length nil buffer nil)))))))
 
 (defclass networking ()
-  ((%server-socket
-    :initarg :server-socket
-    :accessor server-socket)))
+  ((%socket-bundles
+    :initarg :socket-bundles
+    :accessor socket-bundles)))
 
 (defclass nest-implementation (p:fundamental-nest)
   ((%networking
@@ -77,7 +97,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor timing-wheel)
    (%event-loop-queue
     :initarg :event-loop-queue
-    :accessor event-loop-queue))
+    :accessor event-loop-queue)
+   (%event-loop-thread
+    :initarg :event-loop-thread
+    :accessor event-loop-thread))
   (:default-initargs
    :event-loop-queue (q:make-blocking-queue)))
 
@@ -87,7 +110,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (for callback = (q:blocking-queue-pop! queue))
     (when nil
       (finish))
-    (p:fullfill callback)))
+    (promise:fullfill! callback)))
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise)
   (q:blocking-queue-push! (event-loop-queue nest)
@@ -99,10 +122,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (lambda (tw) (declare (ignore tw))
              (p:event-loop-schedule* nest promise)))
   promise)
-
-(defmethod p:make-promise* ((nest nest-implementation) callback)
-  (make 'future
-        :cvar (bt:make-condition-variable)
-        :lock (bt:make-lock)
-        :result nil
-        :completed nil))

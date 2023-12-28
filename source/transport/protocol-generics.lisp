@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric route-discovery-encrypt-payload (route-discovery public-key))
 (defgeneric event-loop-schedule* (nest promise))
 (defgeneric timer-schedule* (nest delay promise))
+(defgeneric handle-incoming-packet (nest packet))
 (defgeneric force (promise)
   (:method ((future t))
     future))

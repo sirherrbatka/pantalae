@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:enveloped-gossip-destination-public-key
    #:gossip-payload
    #:for-me-p
+   #:handle-incoming-packet
    #:peers
    #:gossip-seen-p
    #:gossip-id
@@ -55,6 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:local-nicknames
    (#:p #:pantalea.transport.protocol)
    (#:q #:pantalea.utils.queue)
+   (#:promise #:pantalea.utils.promise)
    (#:tw #:pantalea.utils.timing-wheel)
    (#:sk #:pantalea.utils.skip-list))
   (:export
