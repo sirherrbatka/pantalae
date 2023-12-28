@@ -126,9 +126,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (iterate
         (with queue = (event-loop-queue nest))
         (for callback = (q:blocking-queue-pop! queue))
-        (when nil
-          (finish))
-        (promise:fullfill! callback))
+        (if (typep callback 'promise:promise)
+            (promise:fullfill! callback)
+            (funcall callback)))
     (pantalea.utils.conditions:stop-thread nil)))
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise)
@@ -152,7 +152,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                    (bt:with-lock-held ((lock bundle))
                      (setf (terminating bundle) (promise:promise t)))))
       promise:combine
-      (list _ (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
+      (list _
+            (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
       promise:combine
       (p:event-loop-schedule* nest _)
-      promise:force!))
+      (list _
+            (p:timer-schedule* nest 0
+                               (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
+      promise:combine
+      promise:force!)
+  nest)
