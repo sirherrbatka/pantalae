@@ -171,8 +171,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:combine
       (p:event-loop-schedule* nest _)
       (list _
-            (p:timer-schedule* nest 0
-                               (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
+            (tw:add! (timing-wheel nest)
+                     0
+                     (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
       promise:combine
       promise:force!)
   nest)

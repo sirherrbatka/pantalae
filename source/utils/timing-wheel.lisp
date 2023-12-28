@@ -107,4 +107,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (declare (type simple-vector buckets))
     (q:queue-push! (aref buckets pointer)
                    (make-task :callback callback
-                              :remaining-rounds (truncate ticks size)))))
+                              :remaining-rounds (truncate ticks size)))
+    callback))
