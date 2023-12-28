@@ -94,7 +94,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                          (p:handle-incoming-packet nest
                                                                    buffer)))
                (incf (total-bytes bundle) length)
-               (setf start 0 length nil buffer nil)))))))
+               (setf start 0 length nil buffer nil))))
+         :name "Socket Thread")))
 
 (defclass networking ()
   ((%socket-bundles
@@ -119,6 +120,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor started))
   (:default-initargs
    :started nil
+   :timing-wheel nil
+   :event-loop-thread nil
    :event-loop-queue (q:make-blocking-queue)))
 
 (defun run-event-loop (nest)
@@ -142,9 +145,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (p:event-loop-schedule* nest promise)))
   promise)
 
+(alexandria:define-constant +timing-wheel-size+ 256)
+(alexandria:define-constant +timing-wheel-tick-duration+ 50)
+
+(defmethod p:nest-start ((nest nest-implementation))
+  (unless (started nest)
+    (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
+                                                   :name "Nest Event Loop Thread")
+          (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
+          (started nest) t))
+  nest)
+
 (defmethod p:nest-stop ((nest nest-implementation))
   (unless (started nest)
-    (return-from p:nest-stop nil))
+    (return-from p:nest-stop nest))
   (~> nest
       networking
       socket-bundles
