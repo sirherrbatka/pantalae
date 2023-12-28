@@ -53,8 +53,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   callback
   (remaining-rounds 0 :type fixnum))
 
-(defun task-run! (task timing-wheel)
-  (funcall (task-callback task) timing-wheel))
+(defun task-run! (task timing-wheel &aux (callback (task-callback task)))
+  (if (typep callback 'pantalea.utils.promise:promise)
+      (pantalea.utils.promise:fullfill! callback)
+      (funcall callback timing-wheel)))
 
 (defun tick! (timing-wheel)
   (declare (optimize (speed 3) (safety 0)))
@@ -86,9 +88,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (let ((sleep-duration (/ tick-duration 1000.0)))
       (setf (thread timing-wheel)
             (bt:make-thread (lambda ()
-                              (iterate
-                                (tick! timing-wheel)
-                                (sleep sleep-duration)))
+                              (handler-case
+                                  (iterate
+                                    (tick! timing-wheel)
+                                    (sleep sleep-duration))
+                                (pantalea.utils.conditions:stop-thread nil)))
                             :name "Timer wheel thread")))))
 
 (defun add! (timing-wheel delay callback)

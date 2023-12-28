@@ -79,11 +79,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod fullfill! ((promise single-promise))
   (bind (((:accessors lock cvar callback result fullfilled) promise))
     (bt:with-lock-held (lock)
-      (when fullfilled
-        (return-from fullfill! result))
-      (setf result (funcall callback)
-            fullfilled t)
-      (bt:condition-notify cvar)
+      (when fullfilled (return-from fullfill! result))
+      (unwind-protect
+           (setf fullfilled t
+                 result (funcall callback))
+        (bt:condition-notify cvar))
       result)))
 
 (defmethod fullfill! ((promise combined-promise))

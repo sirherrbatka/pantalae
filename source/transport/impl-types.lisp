@@ -122,12 +122,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :event-loop-queue (q:make-blocking-queue)))
 
 (defun run-event-loop (nest)
-  (iterate
-    (with queue = (event-loop-queue nest))
-    (for callback = (q:blocking-queue-pop! queue))
-    (when nil
-      (finish))
-    (promise:fullfill! callback)))
+  (handler-case
+      (iterate
+        (with queue = (event-loop-queue nest))
+        (for callback = (q:blocking-queue-pop! queue))
+        (when nil
+          (finish))
+        (promise:fullfill! callback))
+    (pantalea.utils.conditions:stop-thread nil)))
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise)
   (q:blocking-queue-push! (event-loop-queue nest)
