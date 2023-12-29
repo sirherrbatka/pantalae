@@ -90,9 +90,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (incf start size))))
              (when (= start length)
                (p:event-loop-schedule* nest
-                                       (promise:promise
-                                         (p:handle-incoming-packet nest
-                                                                   buffer)))
+                                       (curry #'p:handle-incoming-packet
+                                              nest
+                                              buffer))
                (incf (total-bytes bundle) length)
                (setf start 0 length nil buffer nil))))
          :name "Socket Thread")))
@@ -100,7 +100,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass networking ()
   ((%socket-bundles
     :initarg :socket-bundles
-    :accessor socket-bundles)))
+    :accessor socket-bundles))
+  (:default-initargs
+   :socket-bundles (vect)))
 
 (defclass nest-implementation (p:fundamental-nest)
   ((%networking
@@ -122,6 +124,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :started nil
    :timing-wheel nil
    :event-loop-thread nil
+   :networking (make 'networking)
    :event-loop-queue (q:make-blocking-queue)))
 
 (defun run-event-loop (nest)
@@ -164,7 +167,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       socket-bundles
       (map 'list (lambda (bundle)
                    (bt:with-lock-held ((lock bundle))
-                     (setf (terminating bundle) (promise:promise t)))))
+                     (setf (terminating bundle) (promise:promise t))))
+           _)
       promise:combine
       (list _
             (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
@@ -172,8 +176,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (p:event-loop-schedule* nest _)
       (list _
             (tw:add! (timing-wheel nest)
-                     0
+                     +timing-wheel-tick-duration+
                      (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
       promise:combine
       promise:force!)
+  (setf (started nest) nil)
   nest)

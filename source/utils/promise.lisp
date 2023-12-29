@@ -78,25 +78,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod fullfill! ((promise single-promise))
   (bind (((:accessors lock cvar callback result fullfilled) promise))
-    (bt:with-lock-held (lock)
-      (when fullfilled (return-from fullfill! result))
-      (bind (((:values r e) (ignore-errors (funcall callback))))
-        (setf fullfilled t
-              result (or e r))
-        (bt:condition-notify cvar)
-        (when e (signal e)))
-      result)))
+    (unwind-protect
+         (bt:with-lock-held (lock)
+           (unless fullfilled
+             (handler-case
+                 (setf fullfilled t
+                       result (funcall callback))
+               (t (s)
+                 (setf result s)
+                 (signal s))))
+           result)
+      (bt:condition-notify cvar))))
 
 (defmethod fullfill! ((promise combined-promise))
   (map nil #'fullfill! (content promise)))
 
 (defun make-promise (callback)
-  (make 'promise
+  (make 'single-promise
         :cvar (bt:make-condition-variable)
         :callback callback
         :lock (bt:make-lock)
         :result nil
-        :completed nil))
+        :fullfilled nil))
 
 (defmacro promise (&body body)
   `(make-promise (lambda () ,@body)))

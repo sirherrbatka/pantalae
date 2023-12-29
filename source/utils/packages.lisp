@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:queue-push/no-lock!
    #:queue-pop/no-lock!
    #:queue-push!
+   #:lock
    #:queue-pop!
    #:blocking-queue-push!
    #:blocking-queue-pop!))
