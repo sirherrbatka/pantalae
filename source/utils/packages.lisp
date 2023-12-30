@@ -56,6 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:export
    #:fullfill!
    #:fullfilledp
+   #:find-fullfilled
    #:force!
    #:promise
    #:combine

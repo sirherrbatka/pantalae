@@ -39,6 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%result
     :initarg :result
     :accessor result)
+   (%successp
+    :initarg :successp
+    :accessor successp)
    (%fullfilled
     :initarg :fullfilled
     :accessor fullfilled)))
@@ -48,20 +51,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :content
     :accessor content)))
 
-(defgeneric force! (promise)
-  (:method ((promise t))
-    promise))
+(defgeneric force! (promise &key timeout loop)
+  (:method ((promise t) &key timeout loop)
+    (declare (ignore timeout loop))
+    (values promise t)))
 
-(defmethod force! ((promise single-promise))
+(defmethod force! ((promise single-promise) &key timeout (loop t))
   (bind (((:accessors lock cvar result fullfilled) promise))
     (bt:with-lock-held (lock)
-      (iterate
-        (until fullfilled)
-        (bt:condition-wait cvar lock)
-        (finally (return-from force! result))))))
+      (if loop
+          (iterate
+            (until fullfilled)
+            (bt:condition-wait cvar lock :timeout timeout)
+            (finally (return-from force! (values result t))))
+          (progn
+            (bt:condition-wait cvar lock :timeout timeout)
+            (return-from force! (values result (fullfilled promise))))))))
 
-(defmethod force! ((promise combined-promise))
-  (map 'list #'force! (content promise)))
+(defmethod force! ((promise combined-promise) &key timeout (loop t))
+  (map 'list
+       (lambda (promise)
+         (force! promise :timeout timeout :loop loop))
+       (content promise)))
 
 (defgeneric fullfilledp (promise)
   (:method ((promise t))
@@ -74,24 +85,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod fullfilledp ((promise combined-promise))
   (every #'fullfilledp (content promise)))
 
-(defgeneric fullfill! (promise))
+(defgeneric fullfill! (promise &key value success))
 
-(defmethod fullfill! ((promise single-promise))
-  (bind (((:accessors lock cvar callback result fullfilled) promise))
+(defmethod fullfill! ((promise single-promise) &key (value nil value-bound-p) (success t success-bound-p))
+  (bind (((:accessors lock cvar callback result fullfilled successp) promise))
     (unwind-protect
          (bt:with-lock-held (lock)
            (unless fullfilled
              (handler-case
                  (setf fullfilled t
-                       result (funcall callback))
+                       result (if value-bound-p value (funcall callback))
+                       successp (if success-bound-p success t))
                (t (s)
                  (setf result s)
                  (signal s))))
            result)
       (bt:condition-notify cvar))))
 
-(defmethod fullfill! ((promise combined-promise))
-  (map nil #'fullfill! (content promise)))
+(defmethod fullfill! ((promise combined-promise) &key (value nil value-bound-p) (success t success-bound-p))
+  (if value-bound-p
+      (if success-bound-p
+          (map nil
+               (lambda (promise)
+                 (fullfill! promise :value value :success success))
+               (content promise))
+          (map nil
+               (lambda (promise)
+                 (fullfill! promise :success success))
+               (content promise)))
+      (if success-bound-p
+          (map nil
+               (lambda (promise)
+                 (fullfill! promise :success success))
+               (content promise))
+          (map nil
+               (lambda (promise)
+                 (fullfill! promise))
+               (content promise)))))
 
 (defun make-promise (callback)
   (make 'single-promise
@@ -99,6 +129,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         :callback callback
         :lock (bt:make-lock)
         :result nil
+        :successp nil
         :fullfilled nil))
 
 (defmacro promise (&body body)
@@ -108,3 +139,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (check-type promises sequence)
   (make 'combined-promise
         :content promises))
+
+(defun find-fullfilled (promise &rest promises)
+  (iterate
+    (with all-promises = (cons promise promises))
+    (iterate
+      (for i from 0)
+      (for promise in all-promises)
+      (for (values v success) = (force! promise :loop nil :timeout 0.1))
+      (when success (return-from find-fullfilled (values v i))))))

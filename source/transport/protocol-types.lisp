@@ -134,3 +134,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass opened-gossip (fundamental-gossip)
   ()
   (:default-initargs))
+
+(defclass fundamental-network-destination ()
+  ((%peer :initarg :peer
+          :reader network-destination-peer)))

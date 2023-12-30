@@ -39,10 +39,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%start-time
     :initarg :start-time
     :accessor start-time)
+   (%host
+    :initarg :host
+    :accessor host)
    (%lock
     :initarg :lock
     :accessor lock))
   (:default-initargs
+   :lock (bt:make-lock)
+   :host nil
    :socket nil
    :thread nil
    :total-bytes 0
@@ -78,3 +83,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :event-loop-thread nil
    :networking (make 'networking)
    :event-loop-queue (q:make-blocking-queue)))
+
+(defclass ip-destination (p:fundamental-network-destination)
+  ((%host
+    :initarg :host
+    :reader host))
+  (:default-initargs
+   ))

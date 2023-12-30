@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:gossip-seen-p
    #:gossip-id
    #:event-loop-schedule*
-   #:timer-schedule*
    #:completedp
    #:send-gossip
    #:send-data
@@ -47,16 +46,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:opened-message<-enveloped-gossip
    #:force
    #:fullfill
+   #:connect*
    #:nest-stop
    #:nest-start
    #:make-promise*
    #:enveloped-message<-opened-gossip
+   #:fundamental-network-destination
+   #:network-destination-peer
    #:+type-gossip+
    #:+type-ping+
    #:+type-pong+
    #:+type-route-discovery+
    #:+type-data+))
-
 
 (cl:defpackage #:pantalea.transport
   (:use #:common-lisp #:pantalea.aux-package)
