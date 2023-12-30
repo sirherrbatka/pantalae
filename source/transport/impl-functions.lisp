@@ -62,14 +62,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (with start = 0)
          (for terminating = (bt:with-lock-held (lock)
                               (terminating bundle)))
-         (when terminating
-           (leave))
-         (for r-socket = (usocket:wait-for-input socket :timeout 0.5))
+         (when terminating (leave))
+         (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
          (when (null r-socket) (next-iteration))
          (if (null length)
              (setf length (~> socket
                               usocket:socket-stream
-                              nibbles:read-ub32/be))
+                              nibbles:read-ub16/be))
              (progn
                (when (null buffer)
                  (setf buffer (make-array length :element-type '(unsigned-byte 8))))

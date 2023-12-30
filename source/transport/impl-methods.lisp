@@ -23,7 +23,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defmethod p:nest-start ((nest nest-implementation))
+(defmethod p:nest-start* ((nest nest-implementation))
   (unless (started nest)
     (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
                                                    :name "Nest Event Loop Thread")
@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (started nest) t))
   nest)
 
-(defmethod p:nest-stop ((nest nest-implementation))
+(defmethod p:nest-stop* ((nest nest-implementation))
   (unless (started nest)
-    (return-from p:nest-stop nest))
+    (return-from p:nest-stop* nest))
   (~> nest
       networking
       socket-bundles
@@ -53,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:combine
       promise:force!)
   (setf (started nest) nil)
+  (setf (~> nest networking socket-bundles fill-pointer) 0)
   nest)
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise &optional (delay 0))
@@ -65,11 +66,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   promise)
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (let ((socket-bundle (make 'socket-bundle :host (host destination)))
-        (on-succes (promise:promise nil) )
-        (on-fail (promise:promise nil)))
-    (run-socket-bundle socket-bundle nest on-succes on-fail)
-    (if-let ((e (promise:find-fullfilled on-succes on-fail)))
-      (error e))
-    (vector-push-extend socket-bundle (~> nest networking socket-bundles))
-    nil))
+  (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
+        (connected (promise:promise nil))
+        (on-success (promise:promise
+                     (p:event-loop-schedule* nest
+                                             (promise:promise
+                                               (vector-push-extend socket-bundle
+                                                                   (~> nest networking socket-bundles))
+                                               (promise:fullfill! connected)))))
+        (failed (promise:promise nil)))
+    (run-socket-bundle socket-bundle nest on-success failed)
+    (promise:eager-promise
+      (if-let ((e (promise:find-fullfilled connected failed)))
+        (error e)
+        nil))))

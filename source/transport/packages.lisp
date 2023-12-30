@@ -47,8 +47,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:force
    #:fullfill
    #:connect*
-   #:nest-stop
-   #:nest-start
+   #:nest-stop*
+   #:nest-start*
    #:make-promise*
    #:enveloped-message<-opened-gossip
    #:fundamental-network-destination

@@ -40,8 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric peer-routes (peer))
 (defgeneric discover-routes (peer))
 (defgeneric handle-incoming-packet (nest packet))
-(defgeneric nest-stop (nest))
-(defgeneric nest-start (nest))
 (defgeneric force (promise)
   (:method ((future t))
     future))
@@ -52,4 +50,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defgeneric connect* (nest destination))
 (defgeneric event-loop-schedule* (nest promise &optional delay))
-(defgeneric timer-schedule* (nest delay promise))
+(defgeneric nest-stop* (nest))
+(defgeneric nest-start* (nest))

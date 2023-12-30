@@ -47,6 +47,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :fullfilled
     :accessor fullfilled)))
 
+(defclass eager-promise (single-promise)
+  ())
+
 (defclass combined-promise (promise)
   ((%content
     :initarg :content
@@ -64,11 +67,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (iterate
             (until fullfilled)
             (bt:condition-wait cvar lock :timeout timeout)
-            (finally (return-from force! (values result t))))
+            (finally
+             (if (typep result 'condition)
+                 (signal result)
+                 (return-from force! (values result fullfilled)))))
           (progn
             (unless (fullfilled promise)
               (bt:condition-wait cvar lock :timeout timeout))
-            (return-from force! (values result (fullfilled promise))))))))
+            (if (typep result 'condition)
+                 (signal result)
+                 (return-from force! (values result fullfilled))))))))
+
+(defmethod force! ((promise eager-promise) &key timeout (loop t))
+  (declare (ignore timeout loop))
+  (bind (((:accessors callback lock successp cvar result fullfilled) promise))
+    (bt:with-lock-held (lock)
+      (unless fullfilled
+        (handler-case
+            (setf fullfilled t
+                  result (funcall callback)
+                  successp t)
+          (t (s)
+            (setf result s))))
+      (if (typep result 'condition)
+          (signal result)
+          (return-from force! (values result t))))))
 
 (defmethod force! ((promise combined-promise) &key timeout (loop t))
   (map 'list
@@ -150,3 +173,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (for promise in all-promises)
       (for (values v success) = (force! promise :loop nil :timeout 0.1))
       (when success (return-from find-fullfilled (values v i))))))
+
+(defmacro eager-promise (&body body)
+  `(make 'eager-promise
+    :cvar (bt:make-condition-variable)
+    :callback (lambda () ,@body)
+    :lock (bt:make-lock)
+    :result nil
+    :successp nil
+    :fullfilled nil))
