@@ -67,10 +67,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (for r-socket = (usocket:wait-for-input socket :timeout 0.5))
          (when (null r-socket) (next-iteration))
          (if (null length)
-             (bt:with-lock-held (lock)
-               (setf length (~> socket
-                                usocket:socket-stream
-                                nibbles:read-ub32/be)))
+             (setf length (~> socket
+                              usocket:socket-stream
+                              nibbles:read-ub32/be))
              (progn
                (when (null buffer)
                  (setf buffer (make-array length :element-type '(unsigned-byte 8))))
@@ -91,7 +90,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (curry #'p:handle-incoming-packet
                                           nest
                                           buffer))
-           (incf (total-bytes bundle) length)
+           (bt:with-lock-held ((lock bundle))
+             (incf (total-bytes bundle) length))
            (setf start 0 length nil buffer nil)))
     (if-let ((socket (socket bundle)))
       (usocket:socket-close socket))
