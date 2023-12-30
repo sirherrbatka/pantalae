@@ -95,8 +95,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (setf start 0 length nil buffer nil)))
     (if-let ((socket (socket bundle)))
       (usocket:socket-close socket))
-    (if-let ((terminating (terminating bundle)))
-      (promise:fullfill! terminating))))
+    (bt:with-lock-held ((lock bundle))
+      (if-let ((terminating (terminating bundle)))
+        (promise:fullfill! terminating)))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail)
   (setf (thread bundle)
