@@ -66,7 +66,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (bt:condition-wait cvar lock :timeout timeout)
             (finally (return-from force! (values result t))))
           (progn
-            (bt:condition-wait cvar lock :timeout timeout)
+            (unless (fullfilled promise)
+              (bt:condition-wait cvar lock :timeout timeout))
             (return-from force! (values result (fullfilled promise))))))))
 
 (defmethod force! ((promise combined-promise) &key timeout (loop t))
