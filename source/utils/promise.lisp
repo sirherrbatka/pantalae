@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor result)
    (%successp
     :initarg :successp
+    :reader single-promise-success-p
     :accessor successp)
    (%fullfilled
     :initarg :fullfilled

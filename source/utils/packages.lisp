@@ -57,6 +57,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:fullfill!
    #:fullfilledp
    #:find-fullfilled
+   #:single-promise-success-p
    #:force!
    #:promise
    #:combine
