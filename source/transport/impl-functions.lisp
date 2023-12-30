@@ -40,3 +40,61 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (if (local-time:timestamp= timestamp-a timestamp-b)
         nil
         (= id-a id-b))))
+
+(defun run-socket-bundle (bundle nest)
+  (setf (thread bundle)
+        (bt:make-thread
+         (lambda ()
+           (setf (start-time bundle) (local-time:now))
+           (iterate
+             (with length = nil)
+             (with socket = (socket bundle))
+             (with lock = (lock bundle))
+             (with buffer = nil)
+             (with start = 0)
+             (for terminating = (bt:with-lock-held (lock)
+                                  (terminating bundle)))
+             (when terminating
+               (promise:fullfill! terminating)
+               (usocket:socket-close socket)
+               (leave))
+             (for r-socket = (usocket:wait-for-input socket :timeout 0.5))
+             (when (null r-socket) (next-iteration))
+             (if (null length)
+                 (bt:with-lock-held (lock)
+                   (setf length (~> socket
+                                    usocket:socket-stream
+                                    nibbles:read-ub32/be)))
+                 (progn
+                   (when (null buffer)
+                     (setf buffer (make-array length :element-type '(unsigned-byte 8))))
+                   (bind ((new-size (- length start))
+                          (buffer-view (make-array new-size
+                                                   :displaced-to buffer
+                                                   :element-type '(unsigned-byte 8)
+                                                   :displaced-index-offset start))
+                          ((:values buffer size host port)
+                           (bt:with-lock-held (lock)
+                             (usocket:socket-receive socket
+                                                     buffer-view
+                                                     new-size))))
+                     (declare (ignorable buffer host port))
+                     (incf start size))))
+             (when (= start length)
+               (p:event-loop-schedule* nest
+                                       (curry #'p:handle-incoming-packet
+                                              nest
+                                              buffer))
+               (incf (total-bytes bundle) length)
+               (setf start 0 length nil buffer nil))))
+         :name "Socket Thread")))
+
+(defun run-event-loop (nest)
+  (handler-case
+      (iterate
+        (with queue = (event-loop-queue nest))
+        (for callback = (q:blocking-queue-pop! queue))
+        (if (typep callback 'promise:promise)
+            (promise:fullfill! callback)
+            (funcall callback)))
+    (pantalea.utils.conditions:stop-thread nil)))

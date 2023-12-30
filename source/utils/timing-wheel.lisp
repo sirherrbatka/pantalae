@@ -75,7 +75,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (progn
             (decf (task-remaining-rounds task))
             (push task pending-tasks))))
-    (bt:with-lock-held ((lock bucket))
+    (bt:with-lock-held ((q:lock bucket))
       (iterate
         (for task in pending-tasks)
         (q:queue-push/no-lock! bucket task)))

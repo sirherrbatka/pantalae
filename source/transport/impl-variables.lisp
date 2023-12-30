@@ -20,11 +20,8 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport.protocol)
+(cl:in-package #:pantalea.transport)
 
 
-(alexandria:define-constant +type-gossip+ 0)
-(alexandria:define-constant +type-ping+ 1)
-(alexandria:define-constant +type-pong+ 2)
-(alexandria:define-constant +type-route-discovery+ 3)
-(alexandria:define-constant +type-data+ 4)
+(alexandria:define-constant +timing-wheel-size+ 512)
+(alexandria:define-constant +timing-wheel-tick-duration+ 50)

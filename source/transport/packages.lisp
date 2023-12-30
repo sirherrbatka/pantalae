@@ -50,7 +50,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:nest-stop
    #:nest-start
    #:make-promise*
-   #:enveloped-message<-opened-gossip))
+   #:enveloped-message<-opened-gossip
+   #:+type-gossip+
+   #:+type-ping+
+   #:+type-pong+
+   #:+type-route-discovery+
+   #:+type-data+))
 
 
 (cl:defpackage #:pantalea.transport
