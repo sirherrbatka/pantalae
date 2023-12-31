@@ -90,9 +90,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (promise:fullfill! connected))))
                    (run-socket-bundle socket-bundle nest on-success failed destination)))))
     (p:schedule-to-event-loop* nest task)
-    (if-let ((e (promise:find-fullfilled connected failed)))
-      (error e)
-      nil)))
+    (promise:eager-promise
+      (if-let ((e (promise:find-fullfilled connected failed)))
+        (error e)
+        nil))))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." destination reason)

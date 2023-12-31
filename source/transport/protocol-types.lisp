@@ -49,12 +49,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%peers
     :initarg :peers
     :accessor peers)
+   (%main-lock
+    :initarg :main-lock
+    :reader main-lock)
    (%public-key
     :initarg :public-key
     :accessor public-key)
    (%private-key
     :initarg :private-key
-    :accessor private-key)))
+    :accessor private-key))
+  (:default-initargs
+   :main-lock (bt:make-lock)))
 
 (defclass fundamental-connection ()
   ())
