@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peers
    #:gossip-seen-p
    #:gossip-id
-   #:event-loop-schedule*
+   #:schedule-to-event-loop*
    #:completedp
    #:send-gossip
    #:send-data
@@ -49,9 +49,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:connect*
    #:disconnected
    #:connected
-   #:nest-stop*
+   #:stop-nest*
    #:failed-to-connect
-   #:nest-start*
+   #:start-nest*
    #:make-promise*
    #:enveloped-message<-opened-gossip
    #:fundamental-network-destination

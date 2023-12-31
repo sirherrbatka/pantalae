@@ -87,7 +87,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (declare (ignorable buffer host port))
                      (incf start size))))
              (when (= start length)
-               (p:event-loop-schedule* nest
+               (p:schedule-to-event-loop* nest
                                        (curry #'p:handle-incoming-packet
                                               nest
                                               buffer))
@@ -103,7 +103,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setf e :terminated)
         (promise:fullfill! terminating)))
     (log4cl:log-info "Socket thread has been stopped because ~a" e)
-    (p:event-loop-schedule* nest
+    (p:schedule-to-event-loop* nest
                             (promise:promise
                               (p:disconnected nest destination e)))))
 

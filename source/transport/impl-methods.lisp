@@ -23,16 +23,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defmethod p:nest-start* ((nest nest-implementation))
+(defmethod p:start-nest* ((nest nest-implementation))
   (when (started nest)
     (log4cl:log-warn "Trying to start Nest, but it is already started.")
-    (return-from p:nest-start* nest))
+    (return-from p:start-nest* nest))
   (log4cl:log-info "Starting Nest.")
   (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
                                                  :name "Nest Event Loop Thread")
         (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
         (started nest) t)
-  (p:event-loop-schedule* nest (promise:promise
+  (p:schedule-to-event-loop* nest (promise:promise
                                  (log4cl:log-info "Nest Started.")))
   nest)
 
@@ -40,10 +40,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (print-unreadable-object (object stream)
     (format stream "HOST: ~a" (host object))))
 
-(defmethod p:nest-stop* ((nest nest-implementation))
+(defmethod p:stop-nest* ((nest nest-implementation))
   (unless (started nest)
     (log4cl:log-warn "Nest is not yet started so can't stop.")
-    (return-from p:nest-stop* nest))
+    (return-from p:stop-nest* nest))
   (~> nest
       networking
       socket-bundles
@@ -55,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (list _
             (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
       promise:combine
-      (p:event-loop-schedule* nest _)
+      (p:schedule-to-event-loop* nest _)
       (list _
             (tw:add! (timing-wheel nest)
                      +timing-wheel-tick-duration+
@@ -72,20 +72,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-info "Nest has been stopped.")
   nest)
 
-(defmethod p:event-loop-schedule* ((nest nest-implementation) promise &optional (delay 0))
+(defmethod p:schedule-to-event-loop* ((nest nest-implementation) promise &optional (delay 0))
   (if (zerop delay)
       (q:blocking-queue-push! (event-loop-queue nest)
                               promise)
       (tw:add! (timing-wheel nest) delay
                (lambda (tw) (declare (ignore tw))
-                 (p:event-loop-schedule* nest promise))))
+                 (p:schedule-to-event-loop* nest promise))))
   promise)
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
   (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
          (connected (promise:promise nil))
          (on-success (promise:promise
-                       (p:event-loop-schedule* nest
+                       (p:schedule-to-event-loop* nest
                                                (promise:promise
                                                  (vector-push-extend socket-bundle
                                                                      (~> nest networking socket-bundles))
