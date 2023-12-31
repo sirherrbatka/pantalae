@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:disconnected
    #:connected
    #:nest-stop*
+   #:failed-to-connect
    #:nest-start*
    #:make-promise*
    #:enveloped-message<-opened-gossip

@@ -95,9 +95,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (run-socket-bundle socket-bundle nest on-success failed destination)
     (promise:eager-promise
       (if-let ((e (promise:find-fullfilled connected failed)))
-        (progn
-          (log4cl:log-error "Connection to ~a could not be established!" destination)
-          (error e))
+        (error e)
         nil))))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
@@ -106,4 +104,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:connected ((nest nest-implementation) (destination ip-destination))
   (log4cl:log-info "Connection to ~a established." destination)
+  nil)
+
+(defmethod p:failed-to-connect ((nest nest-implementation) (destination ip-destination))
+  (log4cl:log-error "Connection to ~a could not be established." destination)
   nil)
