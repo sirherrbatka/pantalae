@@ -57,8 +57,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass networking ()
   ((%socket-bundles
     :initarg :socket-bundles
-    :accessor socket-bundles))
+    :accessor socket-bundles)
+   (%lock :initarg :lock
+          :reader lock))
   (:default-initargs
+   :lock (bt:make-lock)
    :socket-bundles (vect)))
 
 (defclass nest-implementation (p:fundamental-nest)

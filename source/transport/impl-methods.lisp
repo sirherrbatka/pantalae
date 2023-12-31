@@ -81,21 +81,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (p:with-main-lock-held (nest)
     (unless (started nest) (error 'p:nest-stopped)))
   (let* ((connected (promise:promise nil))
-         (failed (promise:promise nil))
+         (failed (promise:promise
+                   (setf (~> nest networking socket-bundles last-elt) nil)
+                   (decf (~> nest networking socket-bundles fill-pointer))
+                   nil))
          (result nil)
+         (host (host destination))
          (task (promise:promise
-                 (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
+                 (vector-push-extend (make 'socket-bundle :host host)
+                                     (~> nest networking socket-bundles))
+                 (let* ((socket-bundle (~> nest networking socket-bundles last-elt))
                         (on-success (promise:promise
-                                      (vector-push-extend socket-bundle
-                                                          (~> nest networking socket-bundles))
                                       (p:connected nest destination)
                                       (promise:fullfill! connected))))
-                   (run-socket-bundle socket-bundle nest on-success failed destination)
+                   (run-socket-bundle socket-bundle
+                                      nest
+                                      (promise:promise
+                                        (p:schedule-to-event-loop* nest on-success))
+                                      failed
+                                      destination)
                    (setf result socket-bundle)))))
-    (p:schedule-to-event-loop* nest task)
-    (if-let ((e (promise:find-fullfilled connected failed)))
-      (error e)
-      result)))
+    (bt:with-lock-held ((~> nest networking lock))
+      (p:schedule-to-event-loop* nest task)
+      (if-let ((e (promise:find-fullfilled connected failed)))
+        (error e)
+        result))))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." destination reason)

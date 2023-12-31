@@ -119,7 +119,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (unless fullfilled
              (handler-case
                  (setf fullfilled t
-                       result (if value-bound-p value (funcall callback))
+                       result (if value-bound-p
+                                  (progn (ignore-errors (funcall callback))
+                                         value)
+                                  (funcall callback))
                        successp (if success-bound-p success t))
                (t (s)
                  (setf result s)
