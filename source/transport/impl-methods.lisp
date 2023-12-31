@@ -109,7 +109,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (setf (~> nest networking socket-bundles last-elt) nil)
               (decf (~> nest networking socket-bundles fill-pointer))
               (setf result (aref (~> nest networking socket-bundles) position))
-              (promise:fullfill! connected))))
+              (return-from p:connect* result))))
       (if-let ((e (promise:find-fullfilled connected failed)))
         (error e)
         result))))
