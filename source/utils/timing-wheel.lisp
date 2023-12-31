@@ -109,3 +109,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                    (make-task :callback callback
                               :remaining-rounds (truncate ticks size)))
     callback))
+
+(defun join-thread! (timing-wheel)
+  (bt:join-thread (thread timing-wheel)))

@@ -47,6 +47,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:force
    #:fullfill
    #:connect*
+   #:disconnected
+   #:connected
    #:nest-stop*
    #:nest-start*
    #:make-promise*

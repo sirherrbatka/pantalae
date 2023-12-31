@@ -54,6 +54,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:force!)
   (setf (started nest) nil)
   (setf (~> nest networking socket-bundles fill-pointer) 0)
+  (setf (~> nest event-loop-queue) (q:make-blocking-queue))
+  (bt:join-thread (~> nest event-loop-thread))
+  (tw:join-thread! (timing-wheel nest))
+  (setf (~> nest event-loop-thread) nil)
   nest)
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise &optional (delay 0))
@@ -65,7 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (p:event-loop-schedule* nest promise))))
   promise)
 
-(defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
+(defmethod p:connect ((nest nest-implementation) (destination ip-destination))
   (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
         (connected (promise:promise nil))
         (on-success (promise:promise
@@ -80,3 +84,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (if-let ((e (promise:find-fullfilled connected failed)))
         (error e)
         nil))))
+
+(defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
+  (print reason)
+  nil)
+
+(defmethod p:connected ((nest nest-implementation) (destination ip-destination))
+  nil)

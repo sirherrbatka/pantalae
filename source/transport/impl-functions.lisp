@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         nil
         (= id-a id-b))))
 
-(defun run-socket-bundle-impl (bundle nest on-success on-fail)
+(defun run-socket-bundle-impl (bundle nest on-success on-fail destination &aux (e nil))
   (handler-case
       (progn
         (setf (start-time bundle) (local-time:now)
@@ -54,54 +54,61 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (promise:fullfill! on-fail :value e :success nil)
       (error e)))
   (unwind-protect
-       (iterate
-         (with length = nil)
-         (with socket = (socket bundle))
-         (with lock = (lock bundle))
-         (with buffer = nil)
-         (with start = 0)
-         (for terminating = (bt:with-lock-held (lock)
-                              (terminating bundle)))
-         (when terminating (leave))
-         (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
-         (when (null r-socket) (next-iteration))
-         (if (null length)
-             (setf length (~> socket
-                              usocket:socket-stream
-                              nibbles:read-ub16/be))
-             (progn
-               (when (null buffer)
-                 (setf buffer (make-array length :element-type '(unsigned-byte 8))))
-               (bind ((new-size (- length start))
-                      (buffer-view (make-array new-size
-                                               :displaced-to buffer
-                                               :element-type '(unsigned-byte 8)
-                                               :displaced-index-offset start))
-                      ((:values buffer size host port)
-                       (bt:with-lock-held (lock)
-                         (usocket:socket-receive socket
-                                                 buffer-view
-                                                 new-size))))
-                 (declare (ignorable buffer host port))
-                 (incf start size))))
-         (when (= start length)
-           (p:event-loop-schedule* nest
-                                   (curry #'p:handle-incoming-packet
-                                          nest
-                                          buffer))
-           (bt:with-lock-held ((lock bundle))
-             (incf (total-bytes bundle) length))
-           (setf start 0 length nil buffer nil)))
+       (handler-case
+           (iterate
+             (with length = nil)
+             (with socket = (socket bundle))
+             (with lock = (lock bundle))
+             (with buffer = nil)
+             (with start = 0)
+             (for terminating = (bt:with-lock-held (lock)
+                                  (terminating bundle)))
+             (when terminating (leave))
+             (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
+             (when (null r-socket) (next-iteration))
+             (if (null length)
+                 (setf length (~> socket
+                                  usocket:socket-stream
+                                  nibbles:read-ub16/be))
+                 (progn
+                   (when (null buffer)
+                     (setf buffer (make-array length :element-type '(unsigned-byte 8))))
+                   (bind ((new-size (- length start))
+                          (buffer-view (make-array new-size
+                                                   :displaced-to buffer
+                                                   :element-type '(unsigned-byte 8)
+                                                   :displaced-index-offset start))
+                          ((:values buffer size host port)
+                           (bt:with-lock-held (lock)
+                             (usocket:socket-receive socket
+                                                     buffer-view
+                                                     new-size))))
+                     (declare (ignorable buffer host port))
+                     (incf start size))))
+             (when (= start length)
+               (p:event-loop-schedule* nest
+                                       (curry #'p:handle-incoming-packet
+                                              nest
+                                              buffer))
+               (bt:with-lock-held ((lock bundle))
+                 (incf (total-bytes bundle) length))
+               (setf start 0 length nil buffer nil)))
+         (error (er)
+           (setf e er)))
     (if-let ((socket (socket bundle)))
-      (usocket:socket-close socket))
+      (ignore-errors (usocket:socket-close socket)))
     (bt:with-lock-held ((lock bundle))
       (if-let ((terminating (terminating bundle)))
-        (promise:fullfill! terminating)))))
+        (setf e :terminated)
+        (promise:fullfill! terminating)))
+    (p:event-loop-schedule* nest
+                            (promise:promise
+                              (p:disconnected nest destination e)))))
 
-(defun run-socket-bundle (bundle nest on-succes on-fail)
+(defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)
         (bt:make-thread
-         (curry #'run-socket-bundle-impl bundle nest on-succes on-fail)
+         (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
 
 (defun run-event-loop (nest)

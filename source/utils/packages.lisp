@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:local-nicknames
    (#:q #:pantalea.utils.queue))
   (:export
+   #:join-thread!
    #:run
    #:add!))
 

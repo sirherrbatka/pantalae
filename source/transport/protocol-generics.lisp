@@ -49,6 +49,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric route-discovery-encrypt-payload (route-discovery public-key))
 
 (defgeneric connect* (nest destination))
+(defgeneric disconnected (nest destination reason))
+(defgeneric connected (nest destination))
 (defgeneric event-loop-schedule* (nest promise &optional delay))
 (defgeneric nest-stop* (nest))
 (defgeneric nest-start* (nest))
