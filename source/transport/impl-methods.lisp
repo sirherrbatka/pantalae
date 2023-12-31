@@ -69,7 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (p:event-loop-schedule* nest promise))))
   promise)
 
-(defmethod p:connect ((nest nest-implementation) (destination ip-destination))
+(defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
   (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
         (connected (promise:promise nil))
         (on-success (promise:promise
