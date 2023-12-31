@@ -89,27 +89,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (on-success (promise:promise
                        (p:connected nest destination)
                        (promise:fullfill! connected)))
-         (host (host destination))
-         (task (promise:promise
-                 (vector-push-extend (make 'socket-bundle :host host)
-                                     (~> nest networking socket-bundles))
-                 (let ((position (position host (~> nest networking socket-bundles) :test 'equal :key #'host)))
-                   (if (= position (~> nest networking socket-bundles length 1-))
-                       (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
-                         (run-socket-bundle socket-bundle
-                                            nest
-                                            (promise:promise
-                                              (p:schedule-to-event-loop* nest on-success))
-                                            failed
-                                            destination)
-                         (setf result socket-bundle))
-                       (progn
-                         (setf (~> nest networking socket-bundles last-elt) nil)
-                         (decf (~> nest networking socket-bundles fill-pointer))
-                         (setf result (aref (~> nest networking socket-bundles) position))
-                         (promise:fullfill! connected)))))))
+         (host (host destination)))
     (bt:with-lock-held ((~> nest networking lock))
-      (p:schedule-to-event-loop* nest task)
+      (vector-push-extend (make 'socket-bundle :host host)
+                          (~> nest networking socket-bundles))
+      (let ((position (position host (~> nest networking socket-bundles) :test 'equal :key #'host)))
+        (if (= position (~> nest networking socket-bundles length 1-))
+            (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
+              (log4cl:log-info "Starting new connection for ~a." host)
+              (run-socket-bundle socket-bundle
+                                 nest
+                                 (promise:promise
+                                   (p:schedule-to-event-loop* nest on-success))
+                                 failed
+                                 destination)
+              (setf result socket-bundle))
+            (progn
+              (log4cl:log-info "Using existing connection for ~a." host)
+              (setf (~> nest networking socket-bundles last-elt) nil)
+              (decf (~> nest networking socket-bundles fill-pointer))
+              (setf result (aref (~> nest networking socket-bundles) position))
+              (promise:fullfill! connected))))
       (if-let ((e (promise:find-fullfilled connected failed)))
         (error e)
         result))))
