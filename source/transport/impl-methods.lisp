@@ -24,9 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defmethod p:start-nest* ((nest nest-implementation))
-  (when (started nest)
-    (log4cl:log-warn "Trying to start Nest, but it is already started.")
-    (return-from p:start-nest* nest))
+  (when (started nest) (error 'p:nest-started))
   (log4cl:log-info "Starting Nest.")
   (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
                                                  :name "Nest Event Loop Thread")
@@ -41,9 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (format stream "HOST: ~a" (host object))))
 
 (defmethod p:stop-nest* ((nest nest-implementation))
-  (unless (started nest)
-    (log4cl:log-warn "Nest is not yet started so can't stop.")
-    (return-from p:stop-nest* nest))
+  (unless (started nest) (error 'p:nest-stopped))
   (~> nest
       networking
       socket-bundles
@@ -82,17 +78,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   promise)
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
-         (connected (promise:promise nil))
-         (on-success (promise:promise
-                       (p:schedule-to-event-loop* nest
-                                                  (promise:promise
-                                                    (vector-push-extend socket-bundle
-                                                                        (~> nest networking socket-bundles))
-                                                    (p:connected nest destination)
-                                                    (promise:fullfill! connected)))))
-         (failed (promise:promise nil)))
-    (run-socket-bundle socket-bundle nest on-success failed destination)
+  (unless (started nest) (error 'p:nest-stopped))
+  (let* ((connected (promise:promise nil))
+         (failed (promise:promise nil))
+         (task (promise:promise
+                 (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
+                        (on-success (promise:promise
+                                      (vector-push-extend socket-bundle
+                                                          (~> nest networking socket-bundles))
+                                      (p:connected nest destination)
+                                      (promise:fullfill! connected))))
+                   (run-socket-bundle socket-bundle nest on-success failed destination)))))
+    (p:schedule-to-event-loop* nest task)
     (if-let ((e (promise:find-fullfilled connected failed)))
       (error e)
       nil)))

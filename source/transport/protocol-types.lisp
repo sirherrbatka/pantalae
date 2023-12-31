@@ -56,6 +56,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :private-key
     :accessor private-key)))
 
+(defclass fundamental-connection ()
+  ())
+
 (defclass fundamental-gossip ()
   ((%day                                ; 32 bits
     :initarg :day
@@ -138,3 +141,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass fundamental-network-destination ()
   ((%peer :initarg :peer
           :reader network-destination-peer)))
+
+(define-condition nest-stopped (error)
+  ())
+
+(define-condition nest-started (error)
+  ())

@@ -23,7 +23,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defclass socket-bundle ()
+(defclass socket-bundle (p:fundamental-connection)
   ((%socket
     :initarg :socket
     :accessor socket)
