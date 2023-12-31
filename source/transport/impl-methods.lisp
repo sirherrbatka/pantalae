@@ -78,8 +78,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   promise)
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (p:with-main-lock-held (nest)
-    (unless (started nest) (error 'p:nest-stopped)))
   (let* ((connected (promise:promise nil))
          (failed (promise:promise
                    (setf (~> nest networking socket-bundles last-elt) nil)

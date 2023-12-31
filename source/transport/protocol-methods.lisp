@@ -30,3 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod stop-nest* :around ((nest fundamental-nest))
   (bt:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
+
+(defmethod connect* :around ((nest fundamental-nest) destination)
+  (bt:with-lock-held ((main-nest-lock nest))
+    (call-next-method)))
