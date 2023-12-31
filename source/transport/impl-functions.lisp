@@ -99,7 +99,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (if-let ((socket (socket bundle)))
       (ignore-errors (usocket:socket-close socket)))
     (bt:with-lock-held ((lock bundle))
-      (if-let ((terminating (terminating bundle)))
+      (when-let ((terminating (terminating bundle)))
         (setf e :terminated)
         (promise:fullfill! terminating)))
     (log4cl:log-info "Socket thread has been stopped because ~a" e)
