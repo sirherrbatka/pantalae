@@ -86,21 +86,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                    (decf (~> nest networking socket-bundles fill-pointer))
                    nil))
          (result nil)
+         (on-success (promise:promise
+                       (p:connected nest destination)
+                       (promise:fullfill! connected)))
          (host (host destination))
          (task (promise:promise
                  (vector-push-extend (make 'socket-bundle :host host)
                                      (~> nest networking socket-bundles))
-                 (let* ((socket-bundle (~> nest networking socket-bundles last-elt))
-                        (on-success (promise:promise
-                                      (p:connected nest destination)
-                                      (promise:fullfill! connected))))
-                   (run-socket-bundle socket-bundle
-                                      nest
-                                      (promise:promise
-                                        (p:schedule-to-event-loop* nest on-success))
-                                      failed
-                                      destination)
-                   (setf result socket-bundle)))))
+                 (let ((position (position host (~> nest networking socket-bundles) :test 'equal :key #'host)))
+                   (if (= position (~> nest networking socket-bundles length 1-))
+                       (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
+                         (run-socket-bundle socket-bundle
+                                            nest
+                                            (promise:promise
+                                              (p:schedule-to-event-loop* nest on-success))
+                                            failed
+                                            destination)
+                         (setf result socket-bundle))
+                       (progn
+                         (setf (~> nest networking socket-bundles last-elt) nil)
+                         (decf (~> nest networking socket-bundles fill-pointer))
+                         (setf result (aref (~> nest networking socket-bundles) position))
+                         (promise:fullfill! connected)))))))
     (bt:with-lock-held ((~> nest networking lock))
       (p:schedule-to-event-loop* nest task)
       (if-let ((e (promise:find-fullfilled connected failed)))
