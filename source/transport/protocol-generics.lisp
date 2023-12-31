@@ -55,13 +55,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric schedule-to-event-loop* (nest promise &optional delay))
 (defgeneric stop-nest* (nest))
 (defgeneric start-nest* (nest))
-
-(defmethod start-nest* :around ((nest fundamental-nest))
-  (bt:with-lock-held ((main-lock nest))
-    (call-next-method)))
-(defmethod stop-nest* :around ((nest fundamental-nest))
-  (bt:with-lock-held ((main-lock nest))
-    (call-next-method)))
-(defmethod connect* :around ((nest fundamental-nest) destination)
-  (bt:with-lock-held ((main-lock nest))
-    (call-next-method)))
