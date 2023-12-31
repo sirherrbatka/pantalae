@@ -24,15 +24,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defmethod p:nest-start* ((nest nest-implementation))
-  (unless (started nest)
-    (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
-                                                   :name "Nest Event Loop Thread")
-          (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
-          (started nest) t))
+  (when (started nest)
+    (log4cl:log-warn "Trying to start Nest, but it is already started.")
+    (return-from p:nest-start* nest))
+  (log4cl:log-info "Starting Nest.")
+  (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
+                                                 :name "Nest Event Loop Thread")
+        (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
+        (started nest) t)
+  (p:event-loop-schedule* nest (promise:promise
+                                 (log4cl:log-info "Nest Started.")))
   nest)
+
+(defmethod print-object ((object ip-destination) stream)
+  (print-unreadable-object (object stream)
+    (format stream "HOST: ~a" (host object))))
 
 (defmethod p:nest-stop* ((nest nest-implementation))
   (unless (started nest)
+    (log4cl:log-warn "Nest is not yet started so can't stop.")
     (return-from p:nest-stop* nest))
   (~> nest
       networking
@@ -54,10 +64,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:force!)
   (setf (started nest) nil)
   (setf (~> nest networking socket-bundles fill-pointer) 0)
-  (setf (~> nest event-loop-queue) (q:make-blocking-queue))
-  (bt:join-thread (~> nest event-loop-thread))
+  (setf (event-loop-queue nest) (q:make-blocking-queue))
+  (bt:join-thread (event-loop-thread nest))
   (tw:join-thread! (timing-wheel nest))
-  (setf (~> nest event-loop-thread) nil)
+  (setf (event-loop-thread nest) nil)
+  (setf (timing-wheel nest) nil)
+  (log4cl:log-info "Nest has been stopped.")
   nest)
 
 (defmethod p:event-loop-schedule* ((nest nest-implementation) promise &optional (delay 0))
@@ -71,23 +83,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
   (let* ((socket-bundle (make 'socket-bundle :host (host destination)))
-        (connected (promise:promise nil))
-        (on-success (promise:promise
-                     (p:event-loop-schedule* nest
-                                             (promise:promise
-                                               (vector-push-extend socket-bundle
-                                                                   (~> nest networking socket-bundles))
-                                               (promise:fullfill! connected)))))
+         (connected (promise:promise nil))
+         (on-success (promise:promise
+                       (p:event-loop-schedule* nest
+                                               (promise:promise
+                                                 (vector-push-extend socket-bundle
+                                                                     (~> nest networking socket-bundles))
+                                                 (p:connected nest destination)
+                                                 (promise:fullfill! connected)))))
         (failed (promise:promise nil)))
-    (run-socket-bundle socket-bundle nest on-success failed)
+    (run-socket-bundle socket-bundle nest on-success failed destination)
     (promise:eager-promise
       (if-let ((e (promise:find-fullfilled connected failed)))
-        (error e)
+        (progn
+          (log4cl:log-error "Connection to ~a could not be established!" destination)
+          (error e))
         nil))))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
-  (print reason)
+  (log4cl:log-info "Connection to ~a lost because ~a." destination reason)
   nil)
 
 (defmethod p:connected ((nest nest-implementation) (destination ip-destination))
+  (log4cl:log-info "Connection to ~a established." destination)
   nil)

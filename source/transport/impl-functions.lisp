@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (progn
         (setf (start-time bundle) (local-time:now)
               (socket bundle) (usocket:socket-connect (host bundle)
-                                                      +tcp-port+
+                                                      80
                                                       :element-type '(unsigned-byte 8)
                                                       :timeout +tcp-timeout+))
         (promise:fullfill! on-success))
@@ -101,6 +101,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (if-let ((terminating (terminating bundle)))
         (setf e :terminated)
         (promise:fullfill! terminating)))
+    (log4cl:log-info "Socket thread has been stopped because ~a" e)
     (p:event-loop-schedule* nest
                             (promise:promise
                               (p:disconnected nest destination e)))))
@@ -119,4 +120,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (if (typep callback 'promise:promise)
             (promise:fullfill! callback)
             (funcall callback)))
-    (pantalea.utils.conditions:stop-thread nil)))
+    (pantalea.utils.conditions:stop-thread (e)
+      (declare (ignore e))
+      (log4cl:log-info "Event loop has been stopped."))))

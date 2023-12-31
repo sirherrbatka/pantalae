@@ -30,7 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:serapeum #:bordeaux-threads
                 #:usocket  #:alexandria
                 #:ironclad #:cl-conspack
-                #:nibbles  #:local-time)
+                #:nibbles  #:local-time
+                #:log4cl   )
   :components ((:file "aux-package")
                (:module "utils"
                 :components ((:file "packages")
