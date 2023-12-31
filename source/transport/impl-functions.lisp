@@ -88,9 +88,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (incf start size))))
              (when (= start length)
                (p:schedule-to-event-loop* nest
-                                       (curry #'p:handle-incoming-packet
-                                              nest
-                                              buffer))
+                                          (curry #'p:handle-incoming-packet
+                                                 nest
+                                                 buffer))
                (bt:with-lock-held ((lock bundle))
                  (incf (total-bytes bundle) length))
                (setf start 0 length nil buffer nil)))
@@ -104,8 +104,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (promise:fullfill! terminating)))
     (log4cl:log-info "Socket thread has been stopped because ~a" e)
     (p:schedule-to-event-loop* nest
-                            (promise:promise
-                              (p:disconnected nest destination e)))))
+                               (promise:promise
+                                 (p:disconnected nest destination e)))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)

@@ -86,20 +86,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (connected (promise:promise nil))
          (on-success (promise:promise
                        (p:schedule-to-event-loop* nest
-                                               (promise:promise
-                                                 (vector-push-extend socket-bundle
-                                                                     (~> nest networking socket-bundles))
-                                                 (p:connected nest destination)
-                                                 (promise:fullfill! connected)))))
-        (failed (promise:promise nil)))
+                                                  (promise:promise
+                                                    (vector-push-extend socket-bundle
+                                                                        (~> nest networking socket-bundles))
+                                                    (p:connected nest destination)
+                                                    (promise:fullfill! connected)))))
+         (failed (promise:promise nil)))
     (run-socket-bundle socket-bundle nest on-success failed destination)
-    (promise:eager-promise
-      (if-let ((e (promise:find-fullfilled connected failed)))
-        (error e)
-        nil))))
+    (if-let ((e (promise:find-fullfilled connected failed)))
+      (error e)
+      nil)))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." destination reason)
+  (let* ((socket-bundles (~> nest networking socket-bundles))
+         (last-index (~> socket-bundles length 1-))
+         (index (position (host destination) socket-bundles :key #'host :test #'equal)))
+    (when (null index)
+      (log4cl:log-warn "Connection to ~a was not found in nest!" destination)
+      (return-from p:disconnected nil))
+    (rotatef (aref socket-bundles index) (aref socket-bundles last-index))
+    (setf (aref socket-bundles last-index) nil)
+    (decf (fill-pointer socket-bundles)))
   nil)
 
 (defmethod p:connected ((nest nest-implementation) (destination ip-destination))
