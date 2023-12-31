@@ -50,7 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defgeneric disconnected (nest destination reason))
 (defgeneric connected (nest destination connection))
-(defgeneric failed-to-connect (nest destination))
+(defgeneric failed-to-connect (nest destination reason))
 (defgeneric connect* (nest destination))
 (defgeneric schedule-to-event-loop* (nest promise &optional delay))
 (defgeneric stop-nest* (nest))

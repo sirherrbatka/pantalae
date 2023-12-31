@@ -52,7 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (promise:fullfill! on-success))
     (error (e)
       (promise:fullfill! on-fail :value e :success nil)
-      (p:schedule-to-event-loop* nest (promise:promise (p:failed-to-connect nest destination)))
+      (p:schedule-to-event-loop* nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
   (unwind-protect
        (handler-case

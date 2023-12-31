@@ -131,6 +131,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-info "Connection to ~a established." destination)
   nil)
 
-(defmethod p:failed-to-connect ((nest nest-implementation) (destination ip-destination))
-  (log4cl:log-error "Connection to ~a could not be established." destination)
+(defmethod p:failed-to-connect ((nest nest-implementation) (destination ip-destination) reason)
+  (log4cl:log-error "Connection to ~a could not be established because ~a." destination reason)
   nil)
