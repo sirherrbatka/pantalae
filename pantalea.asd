@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "protocol-functions")
                              (:file "protocol-serialization")
                              (:file "protocol-methods")
+                             (:file "protocol-macros")
                              (:file "impl-variables")
                              (:file "impl-types")
                              (:file "impl-functions")

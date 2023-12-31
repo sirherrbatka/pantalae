@@ -54,6 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:failed-to-connect
    #:nest-stopped
    #:nest-started
+   #:with-main-lock-held
    #:start-nest*
    #:make-promise*
    #:enveloped-message<-opened-gossip

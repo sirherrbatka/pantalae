@@ -78,7 +78,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   promise)
 
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (unless (started nest) (error 'p:nest-stopped))
+  (p:with-main-lock-held (nest)
+    (unless (started nest) (error 'p:nest-stopped)))
   (let* ((connected (promise:promise nil))
          (failed (promise:promise nil))
          (task (promise:promise
@@ -90,10 +91,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (promise:fullfill! connected))))
                    (run-socket-bundle socket-bundle nest on-success failed destination)))))
     (p:schedule-to-event-loop* nest task)
-    (promise:eager-promise
-      (if-let ((e (promise:find-fullfilled connected failed)))
-        (error e)
-        nil))))
+    (if-let ((e (promise:find-fullfilled connected failed)))
+      (error e)
+      nil)))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." destination reason)

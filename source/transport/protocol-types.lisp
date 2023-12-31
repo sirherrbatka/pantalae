@@ -49,9 +49,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%peers
     :initarg :peers
     :accessor peers)
-   (%main-lock
-    :initarg :main-lock
-    :reader main-lock)
+   (%main-nest-lock
+    :initarg :main-nest-lock
+    :reader main-nest-lock)
    (%public-key
     :initarg :public-key
     :accessor public-key)
@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :private-key
     :accessor private-key))
   (:default-initargs
-   :main-lock (bt:make-lock)))
+   :main-nest-lock (bt:make-lock)))
 
 (defclass fundamental-connection ()
   ())

@@ -23,10 +23,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
-(defmethod start-nest* :around ((nest fundamental-nest))
-  (bt:with-lock-held ((main-nest-lock nest))
-    (call-next-method)))
-
-(defmethod stop-nest* :around ((nest fundamental-nest))
-  (bt:with-lock-held ((main-nest-lock nest))
-    (call-next-method)))
+(defmacro with-main-lock-held ((nest) &body body)
+  `(bt:with-lock-held ((main-nest-lock ,nest))
+     ,@body))
