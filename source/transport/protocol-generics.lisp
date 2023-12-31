@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric route-discovery-encrypt-payload (route-discovery public-key))
 
 (defgeneric disconnected (nest destination reason))
-(defgeneric connected (nest destination))
+(defgeneric connected (nest destination connection))
 (defgeneric failed-to-connect (nest destination))
 (defgeneric connect* (nest destination))
 (defgeneric schedule-to-event-loop* (nest promise &optional delay))

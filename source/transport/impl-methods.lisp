@@ -44,8 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       networking
       socket-bundles
       (map 'list (lambda (bundle)
-                   (bt:with-lock-held ((lock bundle))
-                     (setf (terminating bundle) (promise:promise t))))
+                   (prog1 (bt:with-lock-held ((lock bundle))
+                         (setf (terminating bundle) (promise:promise t)))
+                     (~> bundle thread bt:join-thread)))
            _)
       promise:combine
       (list _
@@ -85,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                    nil))
          (result nil)
          (on-success (promise:promise
-                       (p:connected nest destination)
+                       (p:connected nest destination result)
                        (promise:fullfill! connected)))
          (host (host destination)))
     (bt:with-lock-held ((~> nest networking lock))
@@ -95,13 +96,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (if (= position (~> nest networking socket-bundles length 1-))
             (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
               (log4cl:log-info "Starting new connection for ~a." host)
+              (setf result socket-bundle)
               (run-socket-bundle socket-bundle
                                  nest
                                  (promise:promise
                                    (p:schedule-to-event-loop* nest on-success))
                                  failed
-                                 destination)
-              (setf result socket-bundle))
+                                 destination))
             (progn
               (log4cl:log-info "Using existing connection for ~a." host)
               (setf (~> nest networking socket-bundles last-elt) nil)
@@ -126,7 +127,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (decf (fill-pointer socket-bundles))))
   nil)
 
-(defmethod p:connected ((nest nest-implementation) (destination ip-destination))
+(defmethod p:connected ((nest nest-implementation) (destination ip-destination) connection)
   (log4cl:log-info "Connection to ~a established." destination)
   nil)
 

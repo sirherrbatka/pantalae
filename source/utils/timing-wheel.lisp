@@ -88,11 +88,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (let ((sleep-duration (/ tick-duration 1000.0)))
       (setf (thread timing-wheel)
             (bt:make-thread (lambda ()
+                              (log4cl:log-info "TMING-WHEEL thread starting.")
                               (handler-case
                                   (iterate
                                     (tick! timing-wheel)
                                     (sleep sleep-duration))
-                                (pantalea.utils.conditions:stop-thread nil)))
+                                (pantalea.utils.conditions:stop-thread (e)
+                                  (declare (ignore e))
+                                  (log4cl:log-info "TMING-WHEEL thread stopping."))))
                             :name "Timer wheel thread")))))
 
 (defun add! (timing-wheel delay callback)
