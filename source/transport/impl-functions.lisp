@@ -69,7 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                  destination))
             (progn
               (log4cl:log-info "Using existing connection for ~a." host)
-              (usocket:socket-close socket-bundle)
+              (usocket:socket-close (socket socket-bundle))
               (setf (~> nest networking socket-bundles last-elt) nil)
               (decf (~> nest networking socket-bundles fill-pointer))
               (setf result (aref (~> nest networking socket-bundles) position))
