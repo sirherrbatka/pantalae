@@ -34,3 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod connect* :around ((nest fundamental-nest) destination)
   (bt:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
+
+(defmethod schedule-to-event-loop* :around ((nest fundamental-nest) promise &optional (delay 0))
+  (declare (ignore delay))
+  (bt:with-lock-held ((main-nest-lock nest))
+    (call-next-method)))

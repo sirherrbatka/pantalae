@@ -41,18 +41,94 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         nil
         (= id-a id-b))))
 
+(defun insert-socket-bundle (nest socket-bundle destination)
+  (setf (host socket-bundle) (~> socket-bundle socket usocket:get-peer-address))
+  (let* ((connected (promise:promise nil))
+         (result nil)
+         (host (host destination))
+         (on-success (promise:promise
+                       (p:connected nest destination result)
+                       (promise:fullfill! connected)))
+         (failed (promise:promise
+                   (setf (~> nest networking socket-bundles last-elt) nil)
+                   (decf (~> nest networking socket-bundles fill-pointer))
+                   nil)))
+    (bt:with-lock-held ((~> nest networking lock))
+      (vector-push-extend socket-bundle
+                          (~> nest networking socket-bundles))
+      (let* ((position (position host (~> nest networking socket-bundles) :test 'equalp :key #'host)))
+        (if (= position (~> nest networking socket-bundles length 1-))
+            (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
+              (log4cl:log-info "Adding new connection for ~a." host)
+              (setf result socket-bundle)
+              (run-socket-bundle socket-bundle
+                                 nest
+                                 (promise:promise
+                                   (schedule-to-event-loop-impl nest on-success))
+                                 failed
+                                 destination))
+            (progn
+              (log4cl:log-info "Using existing connection for ~a." host)
+              (usocket:socket-close socket-bundle)
+              (setf (~> nest networking socket-bundles last-elt) nil)
+              (decf (~> nest networking socket-bundles fill-pointer))
+              (setf result (aref (~> nest networking socket-bundles) position))
+              (return-from insert-socket-bundle result))))
+      (if-let ((e (promise:find-fullfilled connected failed)))
+        (error e)
+        result))))
+
+(defun run-server-socket-impl (nest &aux (networking (networking nest)) e)
+  (log4cl:log-info "Starting server thread.")
+  (unwind-protect
+       (handler-case
+           (iterate
+             (with lock = (server-lock networking))
+             (with socket = (server-socket networking))
+             (for terminating = (bt:with-lock-held (lock) (terminating networking)))
+             (when terminating (leave))
+             (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
+             (when (null r-socket) (next-iteration))
+             (log4cl:log-info "Accepting incoming connection." host)
+             (for active-socket = (usocket:socket-accept r-socket :element-type '(unsigned-byte 8)))
+             (for host = (usocket:get-peer-address socket))
+             (log4cl:log-info "Incoming connection for ~a." host)
+             (for socket-bundle = (make 'socket-bundle :host host :socket active-socket))
+             (handler-case
+                 (insert-socket-bundle nest socket-bundle (make 'ip-destination :host host))
+               (error (e) (log4cl:log-error "~a" e)))))
+    (bt:with-lock-held ((server-lock networking))
+      (when-let ((terminating (terminating networking)))
+        (setf e :terminated)
+        (usocket:socket-close (server-socket networking))
+        (promise:fullfill! terminating)))
+    (log4cl:log-info "Server thread has been stopped because ~a" e)))
+
+(defun run-server-socket (nest)
+  (bind (((:accessors server-socket server-thread) (networking nest)))
+    (handler-case
+        (setf server-socket (usocket:socket-listen usocket:*wildcard-host*
+                                                   +tcp-port+
+                                                   :reuse-address t
+                                                   :element-type '(unsigned-byte 8))
+              server-thread (bt:make-thread (curry #'run-server-socket-impl nest)
+                                            :name "Nest server socket thread."))
+      (error (e)
+        (log4cl:log-error "Can't start server-socket ~a." e)
+        (error e)))))
+
 (defun run-socket-bundle-impl (bundle nest on-success on-fail destination &aux (e nil))
   (handler-case
       (progn
-        (setf (start-time bundle) (local-time:now)
-              (socket bundle) (usocket:socket-connect (host bundle)
-                                                      80
-                                                      :element-type '(unsigned-byte 8)
-                                                      :timeout +tcp-timeout+))
+        (setf (start-time bundle) (local-time:now))
+        (ensure (socket bundle) (usocket:socket-connect (host bundle)
+                                                        +tcp-port+
+                                                        :element-type '(unsigned-byte 8)
+                                                        :timeout +tcp-timeout+))
         (promise:fullfill! on-success))
     (error (e)
       (promise:fullfill! on-fail :value e :success nil)
-      (p:schedule-to-event-loop* nest (promise:promise (p:failed-to-connect nest destination e)))
+      (schedule-to-event-loop-impl nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
   (unwind-protect
        (handler-case
@@ -87,10 +163,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (declare (ignorable buffer host port))
                      (incf start size))))
              (when (= start length)
-               (p:schedule-to-event-loop* nest
-                                          (curry #'p:handle-incoming-packet
-                                                 nest
-                                                 buffer))
+               (schedule-to-event-loop-impl nest
+                                            (curry #'p:handle-incoming-packet
+                                                   nest
+                                                   buffer))
                (bt:with-lock-held ((lock bundle))
                  (incf (total-bytes bundle) length))
                (setf start 0 length nil buffer nil)))
@@ -103,9 +179,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setf e :terminated)
         (promise:fullfill! terminating)))
     (log4cl:log-info "Socket thread has been stopped because ~a" e)
-    (p:schedule-to-event-loop* nest
-                               (promise:promise
-                                 (p:disconnected nest destination e)))))
+    (schedule-to-event-loop-impl nest
+                                 (promise:promise
+                                   (p:disconnected nest destination e)))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)

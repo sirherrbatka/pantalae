@@ -58,10 +58,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%socket-bundles
     :initarg :socket-bundles
     :accessor socket-bundles)
+   (%server-socket
+    :initarg :server-socket
+    :accessor server-socket)
+   (%server-thread
+    :initarg :server-thread
+    :accessor server-thread)
+   (%terminating
+    :initarg :terminating
+    :accessor terminating)
+   (%server-lock
+    :initarg :server-lock
+    :accessor server-lock)
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt:make-lock)
+   :lock (bt:make-lock "Sockets Lock.")
+   :server-socket nil
+   :server-lock (bt:make-lock "Server Lock.")
+   :terminating nil
+   :server-thread nil
    :socket-bundles (vect)))
 
 (defclass nest-implementation (p:fundamental-nest)

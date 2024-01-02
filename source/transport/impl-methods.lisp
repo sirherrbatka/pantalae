@@ -23,53 +23,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-(defmethod p:start-nest* ((nest nest-implementation))
-  (when (started nest) (error 'p:nest-started))
-  (log4cl:log-info "Starting Nest.")
-  (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
-                                                 :name "Nest Event Loop Thread")
-        (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
-        (started nest) t)
-  (p:schedule-to-event-loop* nest (promise:promise
-                                 (log4cl:log-info "Nest Started.")))
-  nest)
-
-(defmethod print-object ((object ip-destination) stream)
-  (print-unreadable-object (object stream)
-    (format stream "HOST: ~a" (host object))))
-
-(defmethod p:stop-nest* ((nest nest-implementation))
+;; method locks main-nest-lock, this function is called from stop/start -nest methods to avoid deadlock Tue Jan  2 15:29:45 2024
+(defun schedule-to-event-loop-impl (nest promise &optional (delay 0))
   (unless (started nest) (error 'p:nest-stopped))
-  (~> nest
-      networking
-      socket-bundles
-      (map 'list (lambda (bundle)
-                   (prog1 (bt:with-lock-held ((lock bundle))
-                         (setf (terminating bundle) (promise:promise t)))
-                     (~> bundle thread bt:join-thread)))
-           _)
-      promise:combine
-      (list _
-            (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))
-      promise:combine
-      (p:schedule-to-event-loop* nest _)
-      (list _
-            (tw:add! (timing-wheel nest)
-                     +timing-wheel-tick-duration+
-                     (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
-      promise:combine
-      promise:force!)
-  (setf (started nest) nil)
-  (setf (~> nest networking socket-bundles fill-pointer) 0)
-  (setf (event-loop-queue nest) (q:make-blocking-queue))
-  (bt:join-thread (event-loop-thread nest))
-  (tw:join-thread! (timing-wheel nest))
-  (setf (event-loop-thread nest) nil)
-  (setf (timing-wheel nest) nil)
-  (log4cl:log-info "Nest has been stopped.")
-  nest)
-
-(defmethod p:schedule-to-event-loop* ((nest nest-implementation) promise &optional (delay 0))
   (if (zerop delay)
       (q:blocking-queue-push! (event-loop-queue nest)
                               promise)
@@ -78,47 +34,73 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (p:schedule-to-event-loop* nest promise))))
   promise)
 
+(defmethod p:start-nest* ((nest nest-implementation))
+  (when (started nest) (error 'p:nest-started))
+  (log4cl:log-info "Starting Nest.")
+  (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
+                                                 :name "Nest Event Loop Thread")
+        (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
+        (started nest) t)
+  (run-server-socket nest)
+  (schedule-to-event-loop-impl nest (promise:promise
+                                      (log4cl:log-info "Nest has been started.")))
+  nest)
+
+(defmethod print-object ((object ip-destination) stream)
+  (print-unreadable-object (object stream)
+    (format stream "HOST: ~a" (host object))))
+
+(defmethod p:stop-nest* ((nest nest-implementation))
+  (unless (started nest) (error 'p:nest-stopped))
+  (log4cl:log-info "Stopping nest.")
+  ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
+  (log4cl:log-info "Stopping sockets.")
+  (~> nest
+      networking
+      socket-bundles
+      (map 'list (lambda (bundle)
+                   (prog1 (bt:with-lock-held ((lock bundle))
+                            (setf (terminating bundle) (promise:promise t)))
+                     (~> bundle thread bt:join-thread)))
+           _)
+      promise:combine
+      (schedule-to-event-loop-impl nest _)
+      promise:force!)
+  (setf (~> nest networking socket-bundles fill-pointer) 0)
+  ;; stop the server thread Tue Jan  2 15:18:50 2024
+  (log4cl:log-info "Stopping server.")
+  (promise:force! (bt:with-lock-held ((~> nest networking server-lock))
+                    (setf (~> nest networking terminating) (promise:promise t))))
+  (~> nest networking server-thread bt:join-thread)
+  (setf (~> nest networking server-thread) nil
+        (~> nest networking server-socket) nil)
+  ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
+  (promise:force! (schedule-to-event-loop-impl nest (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
+  (promise:force! (tw:add! (timing-wheel nest)
+                           +timing-wheel-tick-duration+
+                           (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
+  (bt:join-thread (event-loop-thread nest))
+  (tw:join-thread! (timing-wheel nest))
+  ;; everything should be stopped now, resetting state Tue Jan  2 15:24:41 2024
+  (setf (started nest) nil)
+  (setf (event-loop-queue nest) (q:make-blocking-queue))
+  (setf (event-loop-thread nest) nil)
+  (setf (timing-wheel nest) nil)
+  (log4cl:log-info "Nest has been stopped.")
+  nest)
+
+(defmethod p:schedule-to-event-loop* ((nest nest-implementation) promise &optional (delay 0))
+  (schedule-to-event-loop-impl nest promise delay))
+
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (let* ((connected (promise:promise nil))
-         (failed (promise:promise
-                   (setf (~> nest networking socket-bundles last-elt) nil)
-                   (decf (~> nest networking socket-bundles fill-pointer))
-                   nil))
-         (result nil)
-         (on-success (promise:promise
-                       (p:connected nest destination result)
-                       (promise:fullfill! connected)))
-         (host (host destination)))
-    (bt:with-lock-held ((~> nest networking lock))
-      (vector-push-extend (make 'socket-bundle :host host)
-                          (~> nest networking socket-bundles))
-      (let ((position (position host (~> nest networking socket-bundles) :test 'equal :key #'host)))
-        (if (= position (~> nest networking socket-bundles length 1-))
-            (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
-              (log4cl:log-info "Starting new connection for ~a." host)
-              (setf result socket-bundle)
-              (run-socket-bundle socket-bundle
-                                 nest
-                                 (promise:promise
-                                   (p:schedule-to-event-loop* nest on-success))
-                                 failed
-                                 destination))
-            (progn
-              (log4cl:log-info "Using existing connection for ~a." host)
-              (setf (~> nest networking socket-bundles last-elt) nil)
-              (decf (~> nest networking socket-bundles fill-pointer))
-              (setf result (aref (~> nest networking socket-bundles) position))
-              (return-from p:connect* result))))
-      (if-let ((e (promise:find-fullfilled connected failed)))
-        (error e)
-        result))))
+  (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
 
 (defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." destination reason)
   (bt:with-lock-held ((~> nest networking lock))
     (let* ((socket-bundles (~> nest networking socket-bundles))
            (last-index (~> socket-bundles length 1-))
-           (index (position (host destination) socket-bundles :key #'host :test #'equal)))
+           (index (position (host destination) socket-bundles :key #'host :test #'equalp)))
       (when (null index)
         (log4cl:log-warn "Connection to ~a was not found in nest!" destination)
         (return-from p:disconnected nil))

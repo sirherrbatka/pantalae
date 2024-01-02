@@ -54,4 +54,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric connect* (nest destination))
 (defgeneric schedule-to-event-loop* (nest promise &optional delay))
 (defgeneric stop-nest* (nest))
-(defgeneric start-nest* (nest))
+(defgeneric start-nest* (eest))
