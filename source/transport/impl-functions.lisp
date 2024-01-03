@@ -101,7 +101,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
              (log4cl:log-info "Accepting incoming connection." host)
-             (for active-socket = (usocket:socket-accept r-socket :element-type '(unsigned-byte 8)))
+             (for active-socket = (usocket:socket-accept socket))
              (for host = (usocket:get-peer-address socket))
              (log4cl:log-info "Incoming connection for ~a." host)
              (for socket-bundle = (make 'socket-bundle :host host :socket active-socket))
