@@ -102,7 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (when (null r-socket) (next-iteration))
              (log4cl:log-info "Accepting incoming connection." host)
              (for active-socket = (usocket:socket-accept socket))
-             (for host = (usocket:get-peer-address socket))
+             (for host = (usocket:get-peer-address active-socket))
              (log4cl:log-info "Incoming connection for ~a." host)
              (for socket-bundle = (make 'socket-bundle :host host :socket active-socket))
              (handler-case
