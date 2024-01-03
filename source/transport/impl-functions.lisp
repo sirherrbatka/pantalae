@@ -85,7 +85,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               result))))
     (error (e)
       (when-let ((socket (socket socket-bundle)))
-        (usocket:socket-close socket))
+        (usocket:socket-close socket)
+        (setf (socket socket-bundle) nil))
       (error e))))
 
 (defun run-server-socket-impl (nest &aux (networking (networking nest)) e)
