@@ -42,10 +42,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (= id-a id-b))))
 
 (defun insert-socket-bundle (nest socket-bundle destination)
+  (ensure (socket socket-bundle) (usocket:socket-connect (host socket-bundle)
+                                                         +tcp-port+
+                                                         :element-type '(unsigned-byte 8)
+                                                         :timeout +tcp-timeout+))
   (setf (host socket-bundle) (~> socket-bundle socket usocket:get-peer-address))
   (let* ((connected (promise:promise nil))
          (result nil)
-         (host (host destination))
+         (host (host socket-bundle))
          (on-success (promise:promise
                        (p:connected nest destination result)
                        (promise:fullfill! connected)))
