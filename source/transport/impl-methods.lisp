@@ -108,17 +108,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-error "Connection to ~a could not be established because ~a." destination reason)
   nil)
 
-(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection packet)
-  (check-type packet vector)
-  (when (~> packet length zerop)
-    (log4cl:log-warn "Packet has zero length, ignoring.")
-    (return-from p:handle-incoming-packet* nest))
-  (log4cl:log-info "Packet of type ~a and length ~a" (aref packet 0) (length packet))
-  (switch ((aref packet 0))
-    (p:+type-ping+
-     (log4cl:log-info "Getting pinged.")
-     (p:schedule-to-event-loop* nest (curry #'send-pong connection)))
-    (p:+type-pong+
-     (log4cl:log-info "Got pong.")
-     (schedule-ping nest connection)))
-  nest)
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-pong+)) packet)
+  (log4cl:log-debug "Got pong.")
+  (schedule-ping nest connection))
+
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-ping+)) packet)
+  (log4cl:log-debug "Getting pinged.")
+  (p:schedule-to-event-loop* nest (curry #'send-pong connection)))

@@ -166,18 +166,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
              (for buffer = nil)
+             (for type = nil)
              (bt:with-lock-held (lock)
-               (bind ((length (~> socket usocket:socket-stream nibbles:read-ub16/be)))
-                 (setf buffer (make-array length :element-type '(unsigned-byte 8)))
-                 (iterate
-                   (with stream = (usocket:socket-stream socket))
-                   (for i from 0 below length)
-                   (setf (aref buffer i) (read-byte stream)))
-                 (incf (total-bytes bundle) length)))
+               (let ((stream (usocket:socket-stream socket)))
+                 (setf type (nibbles:read-ub16/be stream))
+                 (bind ((length (nibbles:read-ub16/be stream)))
+                   (setf buffer (make-array length :element-type '(unsigned-byte 8)))
+                   (iterate
+                     (for i from 0 below length)
+                     (setf (aref buffer i) (read-byte stream)))
+                   (incf (total-bytes bundle) length))))
              (schedule-to-event-loop-impl nest
                                           (curry #'p:handle-incoming-packet*
                                                  nest
                                                  bundle
+                                                 type
                                                  buffer)))
          (error (er)
            (setf e er)))
@@ -189,17 +192,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (when-let ((terminating (terminating bundle)))
         (setf e :terminated)
         (promise:fullfill! terminating)))
-    (log4cl:log-info "Socket thread has been stopped because ~a" e)
+    (unless (member e '(nil :terminated))
+      (log4cl:log-error "Socket thread has been stopped because ~a" e))
     (schedule-to-event-loop-impl nest
                                  (promise:promise
                                    (p:disconnected nest bundle e)))))
 
-(defun socket-bundle-send-packet (connection packet)
+(defun socket-bundle-send-packet (connection type packet)
   (with-socket-bundle-locked (connection)
     (let ((stream (~> connection socket usocket:socket-stream)))
       (if (null stream)
           nil
           (let ((length (length packet)))
+            (nibbles:write-ub16/be type stream)
             (nibbles:write-ub16/be length stream)
             (iterate
               (for i from 0 below length)
@@ -208,16 +213,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                        (return t))))))))
 
 (defun send-ping (connection)
-  (socket-bundle-send-packet connection +ping-packet+))
+  (socket-bundle-send-packet connection p:+type-ping+ +empty-packet+))
 
 (defun send-pong (connection)
-  (socket-bundle-send-packet connection +pong-packet+))
+  (socket-bundle-send-packet connection p:+type-pong+ +pong-packet+))
 
 (defun schedule-ping (nest connection)
   (flet ((pinging ()
            (unless (send-ping connection)
              (log4cl:log-warn "Ping not send because socket is disconnected."))))
-    (log4cl:log-info "Scheduling ping!")
+    (log4cl:log-debug "Scheduling ping!")
     (p:schedule-to-event-loop* nest
                                #'pinging
                                +ping-delay+)))
