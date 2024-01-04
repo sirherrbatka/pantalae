@@ -180,7 +180,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (promise:fullfill! terminating)))
     (log4cl:log-info "Server thread has been stopped because ~a" e)))
 
-
 (defun run-server-socket (nest)
   (bind (((:accessors server-socket server-thread) (networking nest)))
     (handler-case
@@ -250,42 +249,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                  (promise:promise
                                    (p:disconnected nest bundle e)))))
 
-(defun send-ping (connection)
-  (p:send-packet connection p:+type-ping+ +empty-packet+))
-
-(defun send-pong (connection)
-  (p:send-packet connection p:+type-pong+ +empty-packet+))
-
-(defun schedule-ping (nest connection)
-  (flet ((pinging ()
-           (unless (send-ping connection)
-             (log4cl:log-warn "Ping not send because socket is disconnected."))))
-    (log4cl:log-debug "Scheduling ping!")
-    (p:schedule-to-event-loop* nest
-                               #'pinging
-                               +ping-delay+)))
-
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)
         (bt:make-thread
          (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
-
-(defmethod p:connected ((nest nest-implementation) (destination ip-destination) (connection socket-bundle))
-  (log4cl:log-info "Connection to ~a established." destination)
-  (schedule-ping nest connection)
-  nil)
-
-(defmethod p:failed-to-connect ((nest nest-implementation) (destination ip-destination) reason)
-  (log4cl:log-error "Connection to ~a could not be established because ~a." destination reason)
-  nil)
-
-(defmethod p:handle-incoming-packet* ((nest nest-implementation) (connection socket-bundle) (type (eql p:+type-pong+)) packet)
-  (log4cl:log-debug "Got pong.")
-  (schedule-ping nest connection)
-  nil)
-
-(defmethod p:handle-incoming-packet* ((nest nest-implementation) (connection socket-bundle) (type (eql p:+type-ping+)) packet)
-  (log4cl:log-debug "Getting pinged.")
-  (p:schedule-to-event-loop* nest (curry #'send-pong connection))
-  nil)

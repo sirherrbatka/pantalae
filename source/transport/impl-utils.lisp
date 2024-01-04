@@ -33,3 +33,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (lambda (&rest rest) (declare (ignore rest))
                  (p:schedule-to-event-loop* nest promise))))
   promise)
+
+(defun send-ping (connection)
+  (p:send-packet connection p:+type-ping+ +empty-packet+))
+
+(defun send-pong (connection)
+  (p:send-packet connection p:+type-pong+ +empty-packet+))
+
+(defun schedule-ping (nest connection)
+  (flet ((pinging ()
+           (unless (send-ping connection)
+             (setf (p:ping-at connection) (local-time:now))
+             (log4cl:log-warn "Ping not sent!"))))
+    (log4cl:log-debug "Scheduling ping!")
+    (p:schedule-to-event-loop* nest
+                               #'pinging
+                               +ping-delay+)))

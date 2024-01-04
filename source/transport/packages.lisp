@@ -58,6 +58,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:enveloped-message<-opened-gossip
    #:fundamental-network-destination
    #:network-destination-peer
+   #:ping-at
+   #:pong-at
    #:+type-gossip+
    #:+type-ping+
    #:+type-pong+
@@ -73,4 +75,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (#:tw #:pantalea.utils.timing-wheel)
    (#:sk #:pantalea.utils.skip-list))
   (:export
-   ))
+   #:connection))

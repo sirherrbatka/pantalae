@@ -98,3 +98,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (setf (aref socket-bundles last-index) nil)
       (decf (fill-pointer socket-bundles))))
   nil)
+
+(defmethod p:connected ((nest nest-implementation) destination connection)
+  (log4cl:log-info "Connection to ~a established." destination)
+  (schedule-ping nest connection)
+  nil)
+
+(defmethod p:failed-to-connect ((nest nest-implementation) destination reason)
+  (log4cl:log-error "Connection to ~a could not be established because ~a." destination reason)
+  nil)
+
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-pong+)) packet)
+  (log4cl:log-debug "Got pong.")
+  (setf (p:pong-at connection) (local-time:now))
+  (schedule-ping nest connection)
+  nil)
+
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-ping+)) packet)
+  (log4cl:log-debug "Got ping.")
+  (p:schedule-to-event-loop* nest (curry #'send-pong connection))
+  nil)

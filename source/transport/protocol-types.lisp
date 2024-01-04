@@ -62,7 +62,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :main-nest-lock (bt:make-lock)))
 
 (defclass fundamental-connection ()
-  ())
+  ((%ping-at
+    :initarg :ping-at
+    :accessor ping-at)
+   (%pong-at
+    :initarg :pong-at
+    :accessor pong-at))
+  (:default-initargs
+   :ping-at nil
+   :pong-at nil))
 
 (defclass fundamental-gossip ()
   ((%day                                ; 32 bits
