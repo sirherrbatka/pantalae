@@ -52,6 +52,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "impl-macros")
                              (:file "impl-variables")
                              (:file "impl-types")
+                             (:file "impl-utils")
+                             (:file "impl-tcp")
                              (:file "impl-functions")
                              (:file "impl-methods")
                              ))

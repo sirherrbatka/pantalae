@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:gossip-seen-p
    #:gossip-id
    #:schedule-to-event-loop*
-   #:completedp
    #:send-gossip
    #:send-data
    #:receive-data
@@ -44,8 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:channel-port-number
    #:channel-nest
    #:opened-message<-enveloped-gossip
-   #:force
-   #:fullfill
+   #:send-packet
    #:connect*
    #:disconnected
    #:connected
