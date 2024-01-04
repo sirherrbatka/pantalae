@@ -29,10 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass single-promise (promise)
   ((%lock
     :initarg :lock
-    :lock (bt:make-lock "PROMISE lock")
+    :initform (bt:make-lock "PROMISE lock")
     :accessor lock)
    (%cvar
     :initarg :cvar
+    :initform (bt:make-condition-variable)
     :accessor cvar)
    (%callback
     :initarg :callback
@@ -154,7 +155,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun make-promise (callback)
   (make 'single-promise
-        :cvar (bt:make-condition-variable)
         :callback callback
         :result nil
         :successp nil
@@ -179,7 +179,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmacro eager-promise (&body body)
   `(make 'eager-promise
-    :cvar (bt:make-condition-variable)
     :callback (lambda () ,@body)
     :result nil
     :successp nil
