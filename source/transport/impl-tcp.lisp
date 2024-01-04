@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defun tcp-networking (nest)
   (p:networking nest :tcp))
 
-
 (defclass tcp-networking ()
   ((%socket-bundles
     :initarg :socket-bundles
@@ -243,7 +242,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (with-socket-bundle-locked (bundle)
       (when-let ((socket (socket bundle)))
         (ignore-errors (usocket:socket-close socket))
-        (setf socket nil)))
+        (setf (socket bundle) nil)))
     (with-socket-bundle-locked (bundle)
       (when-let ((terminating (terminating bundle)))
         (setf e :terminated)
