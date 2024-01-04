@@ -22,7 +22,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 (cl:in-package #:pantalea.transport)
 
-
-(defmacro with-socket-bundle-locked ((socket-bundle) &body body)
-  `(bt:with-lock-held ((lock ,socket-bundle))
-     ,@body))

@@ -105,8 +105,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:send-packet ((connection socket-bundle) type packet)
   (with-socket-bundle-locked (connection)
     (let* ((socket (socket connection))
-           (ready (and socket (usocket:socket-state socket)))
-           (stream (and socket ready (usocket:socket-stream socket))))
+           (stream (and socket (usocket:socket-stream socket))))
       (if stream
           (let ((length (length packet)))
             (nibbles:write-ub16/be type stream)
@@ -122,7 +121,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun insert-socket-bundle (nest socket-bundle destination)
   (handler-case
-      (progn
+      (bt:with-lock-held ((~> nest tcp-networking lock))
         (ensure (socket socket-bundle) (usocket:socket-connect (host socket-bundle)
                                                                +tcp-port+
                                                                :element-type '(unsigned-byte 8)
@@ -138,37 +137,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                          (setf (~> nest tcp-networking socket-bundles last-elt) nil)
                          (decf (~> nest tcp-networking socket-bundles fill-pointer))
                          nil)))
-          (bt:with-lock-held ((~> nest tcp-networking lock))
-            (vector-push-extend socket-bundle
-                                (~> nest tcp-networking socket-bundles))
-            (let* ((position (position host (~> nest tcp-networking socket-bundles) :test 'equalp :key #'host)))
-              (if (= position (~> nest tcp-networking socket-bundles length 1-))
-                  (let ((socket-bundle (~> nest tcp-networking socket-bundles last-elt)))
-                    (log4cl:log-info "Adding new connection for ~a." host)
-                    (setf result socket-bundle)
-                    (run-socket-bundle socket-bundle
-                                       nest
-                                       (promise:promise
-                                         (p:schedule-to-event-loop/no-lock nest on-success))
-                                       (promise:promise
-                                         (p:schedule-to-event-loop/no-lock nest failed))
-                                       destination))
-                  (progn
-                    (log4cl:log-info "Using existing connection for ~a." host)
-                    (usocket:socket-close (socket socket-bundle))
-                    (setf (~> nest tcp-networking socket-bundles last-elt) nil)
-                    (decf (~> nest tcp-networking socket-bundles fill-pointer))
-                    (setf result (aref (~> nest tcp-networking socket-bundles) position))
-                    (return-from insert-socket-bundle result)))))
+          (vector-push-extend socket-bundle
+                              (~> nest tcp-networking socket-bundles))
+          (let* ((position (position host (~> nest tcp-networking socket-bundles) :test 'equalp :key #'host)))
+            (if (= position (~> nest tcp-networking socket-bundles length 1-))
+                (let ((socket-bundle (~> nest tcp-networking socket-bundles last-elt)))
+                  (log4cl:log-info "Adding new connection for ~a." host)
+                  (setf result socket-bundle)
+                  (run-socket-bundle socket-bundle
+                                     nest
+                                     (promise:promise
+                                       (p:schedule-to-event-loop/no-lock nest on-success))
+                                     (promise:promise
+                                       (p:schedule-to-event-loop/no-lock nest failed))
+                                     destination))
+                (progn
+                  (log4cl:log-info "Using existing connection for ~a." host)
+                  (usocket:socket-close (socket socket-bundle))
+                  (setf (~> nest tcp-networking socket-bundles last-elt) nil)
+                  (decf (~> nest tcp-networking socket-bundles fill-pointer))
+                  (setf result (aref (~> nest tcp-networking socket-bundles) position))
+                  (return-from insert-socket-bundle result))))
           (bind (((:values fullfilled number) (promise:find-fullfilled connected failed)))
             (declare (ignore fullfilled))
             (when (= number 1)
               (error "Could not connect!")))
           result))
     (error (e)
-      (when-let ((socket (socket socket-bundle)))
-        (usocket:socket-close socket)
-        (setf (socket socket-bundle) nil))
+      (bt:with-lock-held ((~> nest tcp-networking lock))
+        (when-let ((socket (socket socket-bundle)))
+          (usocket:socket-close socket)
+          (setf (socket socket-bundle) nil)))
       (signal e))))
 
 (defun run-server-socket-impl (nest &aux (networking (tcp-networking nest)) e)
