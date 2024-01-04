@@ -110,8 +110,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-pong+)) packet)
   (log4cl:log-debug "Got pong.")
-  (schedule-ping nest connection))
+  (schedule-ping nest connection)
+  nil)
 
 (defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-ping+)) packet)
   (log4cl:log-debug "Getting pinged.")
-  (p:schedule-to-event-loop* nest (curry #'send-pong connection)))
+  (p:schedule-to-event-loop* nest (curry #'send-pong connection))
+  nil)
