@@ -160,3 +160,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define-condition nest-started (error)
   ())
+
+(deftype packet ()
+  `(simple-array (*) (unsigned-byte 8)))
