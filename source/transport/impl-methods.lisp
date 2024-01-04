@@ -37,10 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (log4cl:log-info "Nest has been started.")))
   nest)
 
-(defmethod print-object ((object ip-destination) stream)
-  (print-unreadable-object (object stream)
-    (format stream "HOST: ~a" (host object))))
-
 (defmethod p:stop-nest* ((nest nest-implementation))
   (unless (started nest) (error 'p:nest-stopped))
   (log4cl:log-info "Stopping nest.")
@@ -63,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-info "Nest has been stopped.")
   nest)
 
-(defmethod p:schedule-to-event-loop* ((nest nest-implementation) promise &optional (delay 0))
+(defmethod p:schedule-to-event-loop/no-lock ((nest nest-implementation) promise &optional (delay 0))
   (schedule-to-event-loop-impl nest promise delay))
 
 (defmethod p:connected ((nest nest-implementation) destination connection)

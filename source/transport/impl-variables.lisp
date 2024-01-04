@@ -25,8 +25,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (alexandria:define-constant +timing-wheel-size+ 512)
 (alexandria:define-constant +timing-wheel-tick-duration+ 50)
-(alexandria:define-constant +tcp-port+ 5287)
-(alexandria:define-constant +tcp-timeout+ 5)
 (alexandria:define-constant +empty-packet+ (make-array 0 :element-type '(unsigned-byte 8))
   :test 'equalp)
 (alexandria:define-constant +ping-delay+ 60000) ; 1 minute

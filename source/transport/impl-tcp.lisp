@@ -20,8 +20,16 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport)
+(cl:in-package #:pantalea.transport.tcp)
 
+
+(defmacro with-socket-bundle-locked ((socket-bundle) &body body)
+  `(bt:with-lock-held ((lock ,socket-bundle))
+     ,@body))
+
+(alexandria:define-constant +tcp-port+ 5287)
+
+(alexandria:define-constant +tcp-timeout+ 5)
 
 (defun tcp-networking (nest)
   (p:networking nest :tcp))
@@ -90,6 +98,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    ))
 
+(defmethod print-object ((object ip-destination) stream)
+  (print-unreadable-object (object stream)
+    (format stream "HOST: ~a" (host object))))
+
 (defmethod p:send-packet ((connection socket-bundle) type packet)
   (with-socket-bundle-locked (connection)
     (let* ((socket (socket connection))
@@ -120,7 +132,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (result nil)
                (host (host socket-bundle))
                (on-success (promise:promise
-                             (schedule-to-event-loop-impl nest (curry #'p:connected nest destination result))
+                             (p:schedule-to-event-loop/no-lock nest (curry #'p:connected nest destination result))
                              (promise:fullfill! connected)))
                (failed (promise:promise
                          (setf (~> nest tcp-networking socket-bundles last-elt) nil)
@@ -137,9 +149,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     (run-socket-bundle socket-bundle
                                        nest
                                        (promise:promise
-                                         (schedule-to-event-loop-impl nest on-success))
+                                         (p:schedule-to-event-loop/no-lock nest on-success))
                                        (promise:promise
-                                         (schedule-to-event-loop-impl nest failed))
+                                         (p:schedule-to-event-loop/no-lock nest failed))
                                        destination))
                   (progn
                     (log4cl:log-info "Using existing connection for ~a." host)
@@ -209,7 +221,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (promise:fullfill! on-success))
     (error (e)
       (promise:fullfill! on-fail :value e :success nil)
-      (schedule-to-event-loop-impl nest (promise:promise (p:failed-to-connect nest destination e)))
+      (p:schedule-to-event-loop/no-lock nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
   (unwind-protect
        (handler-case
@@ -231,12 +243,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (for i from 0 below length)
                      (setf (aref buffer i) (read-byte stream)))
                    (incf (total-bytes bundle) length))))
-             (schedule-to-event-loop-impl nest
-                                          (curry #'p:handle-incoming-packet*
-                                                 nest
-                                                 bundle
-                                                 type
-                                                 buffer)))
+             (p:schedule-to-event-loop/no-lock nest
+                                               (curry #'p:handle-incoming-packet*
+                                                      nest
+                                                      bundle
+                                                      type
+                                                      buffer)))
          (error (er)
            (setf e er)))
     (with-socket-bundle-locked (bundle)
@@ -249,9 +261,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (promise:fullfill! terminating)))
     (unless (member e '(nil :terminated))
       (log4cl:log-error "Socket thread has been stopped because ~a" e))
-    (schedule-to-event-loop-impl nest
-                                 (promise:promise
-                                   (p:disconnected nest bundle e)))))
+    (p:schedule-to-event-loop/no-lock nest
+                                      (promise:promise
+                                        (p:disconnected nest bundle e)))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)
@@ -259,7 +271,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
 
-(defmethod p:disconnected ((nest nest-implementation) (connection socket-bundle) reason)
+(defmethod p:disconnected ((nest p:fundamental-nest) (connection socket-bundle) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
   (bt:with-lock-held ((~> nest tcp-networking lock))
     (let* ((socket-bundles (~> nest tcp-networking socket-bundles))
@@ -273,10 +285,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (decf (fill-pointer socket-bundles))))
   nil)
 
-(defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
+(defmethod p:connect* ((nest p:fundamental-nest) (destination ip-destination))
   (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
 
-(defmethod p:stop-networking ((nest nest-implementation) (networking networking))
+(defmethod p:stop-networking ((nest p:fundamental-nest) (networking networking))
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
   (~> networking
@@ -287,7 +299,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (ignore-errors (~> bundle thread bt:join-thread))))
            _)
       promise:combine
-      (schedule-to-event-loop-impl nest _)
+      (p:schedule-to-event-loop/no-lock nest _)
       promise:force!)
   (setf (~> networking socket-bundles fill-pointer) 0)
   ;; stop the server thread Tue Jan  2 15:18:50 2024
@@ -298,5 +310,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (server-thread networking) nil
         (server-socket networking) nil))
 
-(defmethod p:start-networking ((nest nest-implementation) (networking networking))
+(defmethod p:start-networking ((nest p:fundamental-nest) (networking networking))
   (run-server-socket nest))

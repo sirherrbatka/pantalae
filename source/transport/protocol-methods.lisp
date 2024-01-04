@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bt:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
 
-(defmethod schedule-to-event-loop* :around ((nest fundamental-nest) promise &optional (delay 0))
+(defmethod schedule-to-event-loop* ((nest fundamental-nest) promise &optional (delay 0))
   (declare (ignore delay))
   (bt:with-lock-held ((main-nest-lock nest))
-    (call-next-method)))
+    (schedule-to-event-loop/no-lock nest promise delay)))

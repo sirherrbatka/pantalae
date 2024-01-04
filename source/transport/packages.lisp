@@ -58,6 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:enveloped-message<-opened-gossip
    #:fundamental-network-destination
    #:network-destination-peer
+   #:schedule-to-event-loop/no-lock
    #:ping-at
    #:pong-at
    #:stop-networking
@@ -76,6 +77,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (#:p #:pantalea.transport.protocol)
    (#:promise #:pantalea.utils.promise))
   (:export
+   #:ip-destination
    #:networking))
 
 (cl:defpackage #:pantalea.transport
