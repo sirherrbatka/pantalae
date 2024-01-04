@@ -268,3 +268,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (setf (aref socket-bundles last-index) nil)
       (decf (fill-pointer socket-bundles))))
   nil)
+
+(defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
+  (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
