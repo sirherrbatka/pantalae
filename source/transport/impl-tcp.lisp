@@ -23,6 +23,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
+(defun tcp-networking (nest)
+  (p:networking nest :tcp))
+
+
 (defclass tcp-networking ()
   ((%socket-bundles
     :initarg :socket-bundles
@@ -118,15 +122,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (schedule-to-event-loop-impl nest (curry #'p:connected nest destination result))
                              (promise:fullfill! connected)))
                (failed (promise:promise
-                         (setf (~> nest networking socket-bundles last-elt) nil)
-                         (decf (~> nest networking socket-bundles fill-pointer))
+                         (setf (~> nest tcp-networking socket-bundles last-elt) nil)
+                         (decf (~> nest tcp-networking socket-bundles fill-pointer))
                          nil)))
-          (bt:with-lock-held ((~> nest networking lock))
+          (bt:with-lock-held ((~> nest tcp-networking lock))
             (vector-push-extend socket-bundle
-                                (~> nest networking socket-bundles))
-            (let* ((position (position host (~> nest networking socket-bundles) :test 'equalp :key #'host)))
-              (if (= position (~> nest networking socket-bundles length 1-))
-                  (let ((socket-bundle (~> nest networking socket-bundles last-elt)))
+                                (~> nest tcp-networking socket-bundles))
+            (let* ((position (position host (~> nest tcp-networking socket-bundles) :test 'equalp :key #'host)))
+              (if (= position (~> nest tcp-networking socket-bundles length 1-))
+                  (let ((socket-bundle (~> nest tcp-networking socket-bundles last-elt)))
                     (log4cl:log-info "Adding new connection for ~a." host)
                     (setf result socket-bundle)
                     (run-socket-bundle socket-bundle
@@ -139,9 +143,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                   (progn
                     (log4cl:log-info "Using existing connection for ~a." host)
                     (usocket:socket-close (socket socket-bundle))
-                    (setf (~> nest networking socket-bundles last-elt) nil)
-                    (decf (~> nest networking socket-bundles fill-pointer))
-                    (setf result (aref (~> nest networking socket-bundles) position))
+                    (setf (~> nest tcp-networking socket-bundles last-elt) nil)
+                    (decf (~> nest tcp-networking socket-bundles fill-pointer))
+                    (setf result (aref (~> nest tcp-networking socket-bundles) position))
                     (return-from insert-socket-bundle result)))))
           (bind (((:values fullfilled number) (promise:find-fullfilled connected failed)))
             (declare (ignore fullfilled))
@@ -154,7 +158,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setf (socket socket-bundle) nil))
       (signal e))))
 
-(defun run-server-socket-impl (nest &aux (networking (networking nest)) e)
+(defun run-server-socket-impl (nest &aux (networking (tcp-networking nest)) e)
   (log4cl:log-info "Starting server thread.")
   (unwind-protect
        (handler-case
@@ -181,7 +185,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (log4cl:log-info "Server thread has been stopped because ~a" e)))
 
 (defun run-server-socket (nest)
-  (bind (((:accessors server-socket server-thread) (networking nest)))
+  (bind (((:accessors server-socket server-thread) (tcp-networking nest)))
     (handler-case
         (setf server-socket (usocket:socket-listen usocket:*wildcard-host*
                                                    +tcp-port+
@@ -257,8 +261,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:disconnected ((nest nest-implementation) (connection socket-bundle) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
-  (bt:with-lock-held ((~> nest networking lock))
-    (let* ((socket-bundles (~> nest networking socket-bundles))
+  (bt:with-lock-held ((~> nest tcp-networking lock))
+    (let* ((socket-bundles (~> nest tcp-networking socket-bundles))
            (last-index (~> socket-bundles length 1-))
            (index (position connection socket-bundles :test #'eq)))
       (when (null index)
@@ -276,7 +280,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
   (~> nest
-      networking
+      tcp-networking
       socket-bundles
       (map 'list (lambda (bundle)
                    (prog1 (bt:with-lock-held ((lock bundle))
@@ -286,14 +290,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:combine
       (schedule-to-event-loop-impl nest _)
       promise:force!)
-  (setf (~> nest networking socket-bundles fill-pointer) 0)
+  (setf (~> nest tcp-networking socket-bundles fill-pointer) 0)
   ;; stop the server thread Tue Jan  2 15:18:50 2024
   (log4cl:log-info "Stopping server.")
-  (promise:force! (bt:with-lock-held ((~> nest networking server-lock))
-                    (setf (~> nest networking terminating) (promise:promise t))))
-  (~> nest networking server-thread bt:join-thread)
-  (setf (~> nest networking server-thread) nil
-        (~> nest networking server-socket) nil))
+  (promise:force! (bt:with-lock-held ((~> nest tcp-networking server-lock))
+                    (setf (~> nest tcp-networking terminating) (promise:promise t))))
+  (~> nest tcp-networking server-thread bt:join-thread)
+  (setf (~> nest tcp-networking server-thread) nil
+        (~> nest tcp-networking server-socket) nil))
 
 (defmethod p:start-networking ((nest nest-implementation) (networking tcp-networking))
   (run-server-socket nest))

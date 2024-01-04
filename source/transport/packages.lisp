@@ -62,6 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:pong-at
    #:stop-networking
    #:start-networking
+   #:networking
    #:+type-gossip+
    #:+type-ping+
    #:+type-pong+

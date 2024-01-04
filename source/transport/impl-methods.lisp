@@ -26,11 +26,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:start-nest* ((nest nest-implementation))
   (when (started nest) (error 'p:nest-started))
   (log4cl:log-info "Starting Nest.")
+  (maphash-values (lambda (networking)
+                    (p:start-networking nest networking))
+                  (networking nest))
   (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
                                                  :name "Nest Event Loop Thread")
         (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
         (started nest) t)
-  (p:start-networking nest (networking nest))
   (schedule-to-event-loop-impl nest (promise:promise
                                       (log4cl:log-info "Nest has been started.")))
   nest)
@@ -42,7 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:stop-nest* ((nest nest-implementation))
   (unless (started nest) (error 'p:nest-stopped))
   (log4cl:log-info "Stopping nest.")
-  (p:stop-networking nest (networking nest))
+  (maphash-values (lambda (networking)
+                    (p:stop-networking nest networking))
+                  (networking nest))
    ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
   (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise
                                                                      (signal 'pantalea.utils.conditions:stop-thread)))))
@@ -81,3 +85,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-debug "Got ping.")
   (p:schedule-to-event-loop* nest (curry #'send-pong connection))
   nil)
+
+(defmethod p:networking ((nest nest-implementation) type)
+  (gethash type (networking nest)))

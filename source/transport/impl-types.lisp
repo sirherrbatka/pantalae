@@ -43,5 +43,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :started nil
    :timing-wheel nil
    :event-loop-thread nil
-   :networking (make 'tcp-networking)
+   :networking (dict :tcp (make 'tcp-networking))
    :event-loop-queue (q:make-blocking-queue)))

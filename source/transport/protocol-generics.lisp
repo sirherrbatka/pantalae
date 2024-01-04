@@ -58,3 +58,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric send-packet (connection type packet))
 (defgeneric stop-networking (nest networking))
 (defgeneric start-networking (nest networking))
+(defgeneric networking (nest type))
