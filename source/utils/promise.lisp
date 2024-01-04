@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass single-promise (promise)
   ((%lock
     :initarg :lock
+    :lock (bt:make-lock "PROMISE lock")
     :accessor lock)
    (%cvar
     :initarg :cvar
@@ -155,7 +156,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (make 'single-promise
         :cvar (bt:make-condition-variable)
         :callback callback
-        :lock (bt:make-lock)
         :result nil
         :successp nil
         :fullfilled nil))
@@ -181,7 +181,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   `(make 'eager-promise
     :cvar (bt:make-condition-variable)
     :callback (lambda () ,@body)
-    :lock (bt:make-lock)
     :result nil
     :successp nil
     :fullfilled nil))

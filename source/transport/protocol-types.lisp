@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :private-key
     :accessor private-key))
   (:default-initargs
-   :main-nest-lock (bt:make-lock)))
+   :main-nest-lock (bt:make-lock "NEST lock")))
 
 (defclass fundamental-connection ()
   ((%ping-at

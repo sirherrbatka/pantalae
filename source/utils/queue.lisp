@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor head)
    (%lock
     :initarg :lock
+    :initform (bt:make-lock "QUEUE lock")
     :accessor lock)
    (%tail
     :initarg :tail
@@ -41,18 +42,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass blocking-queue (queue)
   ((%cvar
     :initarg :cvar
+    :initform (bt:make-condition-variable "BLOCKING-QUEUE condition variable")
     :accessor cvar)))
 
 (defun make-queue ()
   (make 'queue
-        :lock (bt:make-lock)
         :head nil
         :tail nil))
 
 (defun make-blocking-queue ()
   (make 'blocking-queue
-        :lock (bt:make-lock)
-        :cvar (bt:make-condition-variable)
         :head nil
         :tail nil))
 

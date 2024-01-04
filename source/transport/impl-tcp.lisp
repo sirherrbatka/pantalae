@@ -46,9 +46,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt:make-lock "Sockets Lock.")
+   :lock (bt:make-lock "Sockets lock")
    :server-socket nil
-   :server-lock (bt:make-lock "Server Lock.")
+   :server-lock (bt:make-lock "Server lock")
    :terminating nil
    :server-thread nil
    :socket-bundles (vect)))
@@ -76,7 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :lock
     :accessor lock))
   (:default-initargs
-   :lock (bt:make-lock)
+   :lock (bt:make-lock "SOCKET-BUNDLE lock.")
    :host nil
    :socket nil
    :thread nil
