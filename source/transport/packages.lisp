@@ -60,6 +60,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:network-destination-peer
    #:ping-at
    #:pong-at
+   #:stop-networking
+   #:start-networking
    #:+type-gossip+
    #:+type-ping+
    #:+type-pong+

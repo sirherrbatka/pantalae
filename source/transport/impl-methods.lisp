@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                  :name "Nest Event Loop Thread")
         (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
         (started nest) t)
-  (run-server-socket nest)
+  (p:start-networking nest (networking nest))
   (schedule-to-event-loop-impl nest (promise:promise
                                       (log4cl:log-info "Nest has been started.")))
   nest)
@@ -42,28 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:stop-nest* ((nest nest-implementation))
   (unless (started nest) (error 'p:nest-stopped))
   (log4cl:log-info "Stopping nest.")
-  ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
-  (log4cl:log-info "Stopping sockets.")
-  (~> nest
-      networking
-      socket-bundles
-      (map 'list (lambda (bundle)
-                   (prog1 (bt:with-lock-held ((lock bundle))
-                            (setf (terminating bundle) (promise:promise t)))
-                     (~> bundle thread bt:join-thread)))
-           _)
-      promise:combine
-      (schedule-to-event-loop-impl nest _)
-      promise:force!)
-  (setf (~> nest networking socket-bundles fill-pointer) 0)
-  ;; stop the server thread Tue Jan  2 15:18:50 2024
-  (log4cl:log-info "Stopping server.")
-  (promise:force! (bt:with-lock-held ((~> nest networking server-lock))
-                    (setf (~> nest networking terminating) (promise:promise t))))
-  (~> nest networking server-thread bt:join-thread)
-  (setf (~> nest networking server-thread) nil
-        (~> nest networking server-socket) nil)
-  ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
+  (p:stop-networking nest (networking nest))
+   ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
   (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise
                                                                      (signal 'pantalea.utils.conditions:stop-thread)))))
   (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
@@ -81,23 +61,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:schedule-to-event-loop* ((nest nest-implementation) promise &optional (delay 0))
   (schedule-to-event-loop-impl nest promise delay))
-
-(defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
-  (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
-
-(defmethod p:disconnected ((nest nest-implementation) (connection socket-bundle) reason)
-  (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
-  (bt:with-lock-held ((~> nest networking lock))
-    (let* ((socket-bundles (~> nest networking socket-bundles))
-           (last-index (~> socket-bundles length 1-))
-           (index (position connection socket-bundles :test #'eq)))
-      (when (null index)
-        (log4cl:log-warn "Connection to ~a was not found in nest!" (host connection))
-        (return-from p:disconnected nil))
-      (rotatef (aref socket-bundles index) (aref socket-bundles last-index))
-      (setf (aref socket-bundles last-index) nil)
-      (decf (fill-pointer socket-bundles))))
-  nil)
 
 (defmethod p:connected ((nest nest-implementation) destination connection)
   (log4cl:log-info "Connection to ~a established." destination)
