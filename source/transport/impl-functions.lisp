@@ -23,9 +23,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
+;; method locks main-nest-lock, this function is called from stop/start -nest methods to avoid deadlock Tue Jan  2 15:29:45 2024
+(defun schedule-to-event-loop-impl (nest promise &optional (delay 0))
+  (unless (started nest) (error 'p:nest-stopped))
+  (if (zerop delay)
+      (q:blocking-queue-push! (event-loop-queue nest)
+                              promise)
+      (tw:add! (timing-wheel nest) delay
+               (lambda (&rest rest) (declare (ignore rest))
+                 (p:schedule-to-event-loop* nest promise))))
+  promise)
+
 (defun gossip-signature (gossip)
-  (cons (p:gossip-timestamp message)
-        (p:gossip-id message)))
+  (cons (p:gossip-timestamp gossip)
+        (p:gossip-id gossip)))
 
 (defun signature< (a b)
   (bind (((timestamp-a . id-a) a)
@@ -53,7 +64,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (result nil)
                (host (host socket-bundle))
                (on-success (promise:promise
-                             (p:connected nest destination result)
+                             (schedule-to-event-loop-impl nest (curry #'p:connected nest destination result))
                              (promise:fullfill! connected)))
                (failed (promise:promise
                          (setf (~> nest networking socket-bundles last-elt) nil)
@@ -71,7 +82,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                        nest
                                        (promise:promise
                                          (schedule-to-event-loop-impl nest on-success))
-                                       failed
+                                       (promise:promise
+                                         (schedule-to-event-loop-impl nest failed))
                                        destination))
                   (progn
                     (log4cl:log-info "Using existing connection for ~a." host)
@@ -79,15 +91,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     (setf (~> nest networking socket-bundles last-elt) nil)
                     (decf (~> nest networking socket-bundles fill-pointer))
                     (setf result (aref (~> nest networking socket-bundles) position))
-                    (return-from insert-socket-bundle result))))
-            (if-let ((e (promise:find-fullfilled connected failed)))
-              (error e)
-              result))))
+                    (return-from insert-socket-bundle result)))))
+          (bind (((:values fullfilled number) (promise:find-fullfilled connected failed)))
+            (declare (ignore fullfilled))
+            (when (= number 1)
+              (error "Could not connect!")))
+          result))
     (error (e)
       (when-let ((socket (socket socket-bundle)))
         (usocket:socket-close socket)
         (setf (socket socket-bundle) nil))
-      (error e))))
+      (signal e))))
 
 (defun run-server-socket-impl (nest &aux (networking (networking nest)) e)
   (log4cl:log-info "Starting server thread.")
@@ -100,7 +114,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (when terminating (leave))
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
-             (log4cl:log-info "Accepting incoming connection." host)
+             (log4cl:log-info "Accepting incoming connection.")
              (for active-socket = (usocket:socket-accept socket))
              (for host = (usocket:get-peer-address active-socket))
              (log4cl:log-info "Incoming connection for ~a." host)
@@ -144,47 +158,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (unwind-protect
        (handler-case
            (iterate
-             (with length = nil)
              (with socket = (socket bundle))
              (with lock = (lock bundle))
-             (with buffer = nil)
-             (with start = 0)
              (for terminating = (bt:with-lock-held (lock)
                                   (terminating bundle)))
              (when terminating (leave))
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
-             (if (null length)
-                 (setf length (~> socket
-                                  usocket:socket-stream
-                                  nibbles:read-ub16/be))
-                 (progn
-                   (when (null buffer)
-                     (setf buffer (make-array length :element-type '(unsigned-byte 8))))
-                   (bind ((new-size (- length start))
-                          (buffer-view (make-array new-size
-                                                   :displaced-to buffer
-                                                   :element-type '(unsigned-byte 8)
-                                                   :displaced-index-offset start))
-                          ((:values buffer size host port)
-                           (bt:with-lock-held (lock)
-                             (usocket:socket-receive socket
-                                                     buffer-view
-                                                     new-size))))
-                     (declare (ignorable buffer host port))
-                     (incf start size))))
-             (when (= start length)
-               (schedule-to-event-loop-impl nest
-                                            (curry #'p:handle-incoming-packet
-                                                   nest
-                                                   buffer))
-               (bt:with-lock-held ((lock bundle))
-                 (incf (total-bytes bundle) length))
-               (setf start 0 length nil buffer nil)))
+             (for buffer = nil)
+             (bt:with-lock-held (lock)
+               (bind ((length (~> socket usocket:socket-stream nibbles:read-ub16/be)))
+                 (setf buffer (make-array length :element-type '(unsigned-byte 8)))
+                 (iterate
+                   (with stream = (usocket:socket-stream socket))
+                   (for i from 0 below length)
+                   (setf (aref buffer i) (read-byte stream)))
+                 (incf (total-bytes bundle) length)))
+             (schedule-to-event-loop-impl nest
+                                          (curry #'p:handle-incoming-packet*
+                                                 nest
+                                                 bundle
+                                                 buffer)))
          (error (er)
            (setf e er)))
-    (if-let ((socket (socket bundle)))
-      (ignore-errors (usocket:socket-close socket)))
+    (bt:with-lock-held ((lock bundle))
+      (when-let ((socket (socket bundle)))
+        (ignore-errors (usocket:socket-close socket))
+        (setf socket nil)))
     (bt:with-lock-held ((lock bundle))
       (when-let ((terminating (terminating bundle)))
         (setf e :terminated)
@@ -192,7 +192,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (log4cl:log-info "Socket thread has been stopped because ~a" e)
     (schedule-to-event-loop-impl nest
                                  (promise:promise
-                                   (p:disconnected nest destination e)))))
+                                   (p:disconnected nest bundle e)))))
+
+(defun socket-bundle-send-packet (connection packet)
+  (with-socket-bundle-locked (connection)
+    (let ((stream (~> connection socket usocket:socket-stream)))
+      (if (null stream)
+          nil
+          (let ((length (length packet)))
+            (nibbles:write-ub16/be length stream)
+            (iterate
+              (for i from 0 below length)
+              (write-byte (aref packet i) stream)
+              (finally (finish-output stream)
+                       (return t))))))))
+
+(defun send-ping (connection)
+  (socket-bundle-send-packet connection +ping-packet+))
+
+(defun send-pong (connection)
+  (socket-bundle-send-packet connection +pong-packet+))
+
+(defun schedule-ping (nest connection)
+  (flet ((pinging ()
+           (unless (send-ping connection)
+             (log4cl:log-warn "Ping not send because socket is disconnected."))))
+    (log4cl:log-info "Scheduling ping!")
+    (p:schedule-to-event-loop* nest
+                               #'pinging
+                               +ping-delay+)))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)
@@ -210,4 +238,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (funcall callback)))
     (pantalea.utils.conditions:stop-thread (e)
       (declare (ignore e))
-      (log4cl:log-info "Event loop has been stopped."))))
+      (log4cl:log-info "Event loop has been stopped."))
+    (error (e)
+      (log4cl:log-error "Event loop has crashed with ~a" e))))

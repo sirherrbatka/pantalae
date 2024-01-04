@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:enveloped-gossip-destination-public-key
    #:gossip-payload
    #:for-me-p
-   #:handle-incoming-packet
+   #:handle-incoming-packet*
    #:peers
    #:gossip-seen-p
    #:gossip-id

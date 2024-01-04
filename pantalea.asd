@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:usocket  #:alexandria
                 #:ironclad #:cl-conspack
                 #:nibbles  #:local-time
-                #:log4cl   )
+                #:log4cl   #:flexi-streams)
   :components ((:file "aux-package")
                (:module "utils"
                 :components ((:file "packages")
@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "protocol-serialization")
                              (:file "protocol-methods")
                              (:file "protocol-macros")
+                             (:file "impl-macros")
                              (:file "impl-variables")
                              (:file "impl-types")
                              (:file "impl-functions")

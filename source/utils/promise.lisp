@@ -87,7 +87,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (setf fullfilled t
                   result (funcall callback)
                   successp t)
-          (t (s)
+          (condition (s)
             (setf result s))))
       (if (typep result 'condition)
           (signal result)
@@ -124,7 +124,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                          value)
                                   (funcall callback))
                        successp (if success-bound-p success t))
-               (t (s)
+               (condition (s)
                  (setf result s)
                  (signal s))))
            result)

@@ -23,17 +23,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport)
 
 
-;; method locks main-nest-lock, this function is called from stop/start -nest methods to avoid deadlock Tue Jan  2 15:29:45 2024
-(defun schedule-to-event-loop-impl (nest promise &optional (delay 0))
-  (unless (started nest) (error 'p:nest-stopped))
-  (if (zerop delay)
-      (q:blocking-queue-push! (event-loop-queue nest)
-                              promise)
-      (tw:add! (timing-wheel nest) delay
-               (lambda (tw) (declare (ignore tw))
-                 (p:schedule-to-event-loop* nest promise))))
-  promise)
-
 (defmethod p:start-nest* ((nest nest-implementation))
   (when (started nest) (error 'p:nest-started))
   (log4cl:log-info "Starting Nest.")
@@ -75,10 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (~> nest networking server-thread) nil
         (~> nest networking server-socket) nil)
   ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
-  (promise:force! (schedule-to-event-loop-impl nest (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
-  (promise:force! (tw:add! (timing-wheel nest)
-                           +timing-wheel-tick-duration+
-                           (promise:promise (signal 'pantalea.utils.conditions:stop-thread))))
+  (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise
+                                                                     (signal 'pantalea.utils.conditions:stop-thread)))))
+  (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
+                                          +timing-wheel-tick-duration+
+                                          (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))))
   (bt:join-thread (event-loop-thread nest))
   (tw:join-thread! (timing-wheel nest))
   ;; everything should be stopped now, resetting state Tue Jan  2 15:24:41 2024
@@ -95,14 +85,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
   (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
 
-(defmethod p:disconnected ((nest nest-implementation) (destination ip-destination) reason)
-  (log4cl:log-info "Connection to ~a lost because ~a." destination reason)
+(defmethod p:disconnected ((nest nest-implementation) (connection socket-bundle) reason)
+  (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
   (bt:with-lock-held ((~> nest networking lock))
     (let* ((socket-bundles (~> nest networking socket-bundles))
            (last-index (~> socket-bundles length 1-))
-           (index (position (host destination) socket-bundles :key #'host :test #'equalp)))
+           (index (position connection socket-bundles :test #'eq)))
       (when (null index)
-        (log4cl:log-warn "Connection to ~a was not found in nest!" destination)
+        (log4cl:log-warn "Connection to ~a was not found in nest!" (host connection))
         (return-from p:disconnected nil))
       (rotatef (aref socket-bundles index) (aref socket-bundles last-index))
       (setf (aref socket-bundles last-index) nil)
@@ -111,8 +101,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:connected ((nest nest-implementation) (destination ip-destination) connection)
   (log4cl:log-info "Connection to ~a established." destination)
+  (schedule-ping nest connection)
   nil)
 
 (defmethod p:failed-to-connect ((nest nest-implementation) (destination ip-destination) reason)
   (log4cl:log-error "Connection to ~a could not be established because ~a." destination reason)
   nil)
+
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection packet)
+  (check-type packet vector)
+  (when (~> packet length zerop)
+    (log4cl:log-warn "Packet has zero length, ignoring.")
+    (return-from p:handle-incoming-packet* nest))
+  (log4cl:log-info "Packet of type ~a and length ~a" (aref packet 0) (length packet))
+  (switch ((aref packet 0))
+    (p:+type-ping+
+     (log4cl:log-info "Getting pinged.")
+     (p:schedule-to-event-loop* nest (curry #'send-pong connection)))
+    (p:+type-pong+
+     (log4cl:log-info "Got pong.")
+     (schedule-ping nest connection)))
+  nest)

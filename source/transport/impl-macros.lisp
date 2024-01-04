@@ -20,10 +20,9 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport.protocol)
+(cl:in-package #:pantalea.transport)
 
 
-(defun gossip-timestamp (gossip)
-  (local-time:make-timestamp :day (day gossip)
-                             :sec (sec gossip)
-                             :nsce (nsec gossip)))
+(defmacro with-socket-bundle-locked ((socket-bundle) &body body)
+  `(bt:with-lock-held ((lock ,socket-bundle))
+     ,@body))
