@@ -42,9 +42,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun schedule-ping (nest connection)
   (flet ((pinging ()
-           (unless (send-ping connection)
-             (setf (p:ping-at connection) (local-time:now))
-             (log4cl:log-warn "Ping not sent!"))))
+           (if (send-ping connection)
+               (setf (p:ping-at connection) (local-time:now))
+               (log4cl:log-warn "Ping not sent!"))))
     (log4cl:log-debug "Scheduling ping!")
     (p:schedule-to-event-loop* nest
                                #'pinging

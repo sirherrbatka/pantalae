@@ -254,3 +254,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (bt:make-thread
          (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
+
+(defmethod p:disconnected ((nest nest-implementation) (connection socket-bundle) reason)
+  (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
+  (bt:with-lock-held ((~> nest networking lock))
+    (let* ((socket-bundles (~> nest networking socket-bundles))
+           (last-index (~> socket-bundles length 1-))
+           (index (position connection socket-bundles :test #'eq)))
+      (when (null index)
+        (log4cl:log-warn "Connection to ~a was not found in nest!" (host connection))
+        (return-from p:disconnected nil))
+      (rotatef (aref socket-bundles index) (aref socket-bundles last-index))
+      (setf (aref socket-bundles last-index) nil)
+      (decf (fill-pointer socket-bundles))))
+  nil)
