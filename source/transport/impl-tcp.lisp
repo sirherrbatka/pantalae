@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defun tcp-networking (nest)
   (p:networking nest :tcp))
 
-(defclass tcp-networking ()
+(defclass networking ()
   ((%socket-bundles
     :initarg :socket-bundles
     :accessor socket-bundles)
@@ -276,11 +276,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:connect* ((nest nest-implementation) (destination ip-destination))
   (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
 
-(defmethod p:stop-networking ((nest nest-implementation) (networking tcp-networking))
+(defmethod p:stop-networking ((nest nest-implementation) (networking networking))
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
-  (~> nest
-      tcp-networking
+  (~> networking
       socket-bundles
       (map 'list (lambda (bundle)
                    (prog1 (bt:with-lock-held ((lock bundle))
@@ -290,14 +289,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       promise:combine
       (schedule-to-event-loop-impl nest _)
       promise:force!)
-  (setf (~> nest tcp-networking socket-bundles fill-pointer) 0)
+  (setf (~> networking socket-bundles fill-pointer) 0)
   ;; stop the server thread Tue Jan  2 15:18:50 2024
   (log4cl:log-info "Stopping server.")
-  (promise:force! (bt:with-lock-held ((~> nest tcp-networking server-lock))
+  (promise:force! (bt:with-lock-held ((server-lock networking))
                     (setf (~> nest tcp-networking terminating) (promise:promise t))))
   (~> nest tcp-networking server-thread bt:join-thread)
-  (setf (~> nest tcp-networking server-thread) nil
-        (~> nest tcp-networking server-socket) nil))
+  (setf (server-thread networking) nil
+        (server-socket networking) nil))
 
-(defmethod p:start-networking ((nest nest-implementation) (networking tcp-networking))
+(defmethod p:start-networking ((nest nest-implementation) (networking networking))
   (run-server-socket nest))

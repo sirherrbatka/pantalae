@@ -70,10 +70,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:+type-route-discovery+
    #:+type-data+))
 
+(cl:defpackage #:pantalea.transport.tcp
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames
+   (#:p #:pantalea.transport.protocol)
+   (#:promise #:pantalea.utils.promise))
+  (:export
+   #:networking))
+
 (cl:defpackage #:pantalea.transport
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
    (#:p #:pantalea.transport.protocol)
+   (#:tcp #:pantalea.transport.tcp)
    (#:q #:pantalea.utils.queue)
    (#:promise #:pantalea.utils.promise)
    (#:tw #:pantalea.utils.timing-wheel)
