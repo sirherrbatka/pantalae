@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass blocking-queue (queue)
   ((%cvar
     :initarg :cvar
-    :initform (bt:make-condition-variable "BLOCKING-QUEUE condition variable")
+    :initform (bt:make-condition-variable :name "BLOCKING-QUEUE condition variable")
     :accessor cvar)))
 
 (defun make-queue ()

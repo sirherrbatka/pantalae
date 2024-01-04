@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
                                           +timing-wheel-tick-duration+
                                           (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))))
-  (bt:join-thread (event-loop-thread nest))
+  (ignore-errors (bt:join-thread (event-loop-thread nest)))
   (tw:join-thread! (timing-wheel nest))
   ;; everything should be stopped now, resetting state Tue Jan  2 15:24:41 2024
   (setf (started nest) nil)

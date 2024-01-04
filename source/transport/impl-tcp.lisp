@@ -93,11 +93,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:send-packet ((connection socket-bundle) type packet)
   (with-socket-bundle-locked (connection)
-    (let ((stream (~> connection socket usocket:socket-stream)))
-      (if (null stream)
-          (progn
-            (log4cl:log-warn "Attempting to send packet, but socket has expired.")
-            nil)
+    (let* ((socket (socket connection))
+           (ready (and socket (usocket:socket-state socket)))
+           (stream (and socket ready (usocket:socket-stream socket))))
+      (if stream
           (let ((length (length packet)))
             (nibbles:write-ub16/be type stream)
             (nibbles:write-ub16/be length stream)
@@ -105,7 +104,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (for i from 0 below length)
               (write-byte (aref packet i) stream)
               (finally (finish-output stream)
-                       (return t))))))))
+                       (return t))))
+          (progn
+            (log4cl:log-warn "Attempting to send packet, but socket has expired.")
+            nil)))))
 
 (defun insert-socket-bundle (nest socket-bundle destination)
   (handler-case
@@ -214,15 +216,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
        (handler-case
            (iterate
              (with socket = (socket bundle))
-             (with lock = (lock bundle))
-             (for terminating = (bt:with-lock-held (lock)
+             (for terminating = (with-socket-bundle-locked (bundle)
                                   (terminating bundle)))
              (when terminating (leave))
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
              (for buffer = nil)
              (for type = nil)
-             (bt:with-lock-held (lock)
+             (with-socket-bundle-locked (bundle)
                (let ((stream (usocket:socket-stream socket)))
                  (setf type (nibbles:read-ub16/be stream))
                  (bind ((length (nibbles:read-ub16/be stream)))
@@ -239,11 +240,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                  buffer)))
          (error (er)
            (setf e er)))
-    (bt:with-lock-held ((lock bundle))
+    (with-socket-bundle-locked (bundle)
       (when-let ((socket (socket bundle)))
         (ignore-errors (usocket:socket-close socket))
         (setf socket nil)))
-    (bt:with-lock-held ((lock bundle))
+    (with-socket-bundle-locked (bundle)
       (when-let ((terminating (terminating bundle)))
         (setf e :terminated)
         (promise:fullfill! terminating)))
@@ -285,7 +286,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (map 'list (lambda (bundle)
                    (prog1 (bt:with-lock-held ((lock bundle))
                             (setf (terminating bundle) (promise:promise t)))
-                     (~> bundle thread bt:join-thread)))
+                     (ignore-errors (~> bundle thread bt:join-thread))))
            _)
       promise:combine
       (schedule-to-event-loop-impl nest _)
