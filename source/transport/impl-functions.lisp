@@ -216,7 +216,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (socket-bundle-send-packet connection p:+type-ping+ +empty-packet+))
 
 (defun send-pong (connection)
-  (socket-bundle-send-packet connection p:+type-pong+ +pong-packet+))
+  (socket-bundle-send-packet connection p:+type-pong+ +empty-packet+))
 
 (defun schedule-ping (nest connection)
   (flet ((pinging ()
