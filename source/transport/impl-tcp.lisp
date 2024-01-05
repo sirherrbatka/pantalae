@@ -154,9 +154,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 (progn
                   (log4cl:log-info "Using existing connection for ~a." host)
                   (usocket:socket-close (socket socket-bundle))
-                  (setf (~> nest tcp-networking socket-bundles last-elt) nil)
+                  (setf (~> nest tcp-networking socket-bundles last-elt) nil
+                        result (~> nest tcp-networking socket-bundles (aref position)))
                   (decf (~> nest tcp-networking socket-bundles fill-pointer))
-                  (setf result (aref (~> nest tcp-networking socket-bundles) position))
                   (return-from insert-socket-bundle result))))
           (bind (((:values fullfilled number) (promise:find-fullfilled connected failed)))
             (declare (ignore fullfilled))
