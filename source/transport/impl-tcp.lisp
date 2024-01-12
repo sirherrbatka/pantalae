@@ -242,12 +242,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (for i from 0 below length)
                      (setf (aref buffer i) (read-byte stream)))
                    (incf (total-bytes bundle) length))))
-             (p:schedule-to-event-loop/no-lock nest
-                                               (curry #'p:handle-incoming-packet*
-                                                      nest
-                                                      bundle
-                                                      type
-                                                      buffer)))
+             (p:schedule-to-event-loop* nest
+                                        (curry #'p:handle-incoming-packet*
+                                               nest
+                                               bundle
+                                               type
+                                               buffer)))
          (error (er)
            (setf e er)))
     (with-socket-bundle-locked (bundle)

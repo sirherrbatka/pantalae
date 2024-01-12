@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "protocol-methods")
                              (:file "protocol-macros")
                              (:file "impl-macros")
+                             (:file "impl-intra")
                              (:file "impl-tcp")
                              (:file "impl-variables")
                              (:file "impl-types")
