@@ -77,7 +77,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     (finding i such-that (eq (other-nest c)
                                              (other-nest connection))))))
       (when (null index)
-        (log4cl:log-warn "Connection to ~a was not found in nest!" (host connection))
+        (log4cl:log-warn "Connection to ~a was not found in nest!" connection)
         (return-from p:disconnected nil))
       (rotatef (aref connections index) (aref connections last-index))
       (setf (aref connections last-index) nil)
@@ -117,7 +117,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                      connection
                                                      type
                                                      packet)))
-                 (progn (promise:fullfill! elt)
+                 (progn (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
+                        (p:schedule-to-event-loop* nest (curry #'p:disconnected nest connection nil))
+                        (promise:fullfill! elt)
                         (leave)))))))
   connection)
 

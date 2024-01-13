@@ -61,7 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :main-nest-lock (bt:make-lock "NEST lock")))
 
-(defclass fundamental-connection ()
+(defclass fundamental-connection (pantalea.utils.dependency:dependency-cell)
   ((%ping-at
     :initarg :ping-at
     :accessor ping-at)
@@ -71,6 +71,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :ping-at nil
    :pong-at nil))
+
+(defclass dead-connection (fundamental-connection)
+  ())
 
 (defclass fundamental-gossip ()
   ((%day                                ; 32 bits

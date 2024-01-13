@@ -42,6 +42,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:insert!
    #:make-skip-list))
 
+(cl:defpackage #:pantalea.utils.dependency
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:dependency-cell
+   #:on-dependency-killed
+   #:dead-class
+   #:kill
+   #:deadp
+   #:depend))
+
 (cl:defpackage #:pantalea.utils.timing-wheel
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames

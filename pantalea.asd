@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "skip-list")
                              (:file "queue")
                              (:file "conditions")
+                             (:file "dep")
                              (:file "promise")
                              (:file "timing-wheel")))
                (:module "transport"

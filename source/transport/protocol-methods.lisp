@@ -38,3 +38,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod schedule-to-event-loop* ((nest fundamental-nest) promise &optional (delay 0))
   (bt:with-lock-held ((main-nest-lock nest))
     (schedule-to-event-loop/no-lock nest promise delay)))
+
+(defmethod disconnected :after ((nest fundamental-nest) (connection fundamental-connection) reason)
+  (pantalea.utils.dependency:kill connection))
+
+(defmethod send-packet ((connection dead-connection) type packet)
+  nil)
+
+(defmethod pantalea.utils.dependency:dead-class ((connection fundamental-connection))
+  'dead-connection)
