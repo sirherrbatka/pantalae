@@ -63,7 +63,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :outgoing-queue (q:make-blocking-queue)))
 
 (defmethod p:send-packet ((connection connection) type packet)
-  (q:blocking-queue-push! (outgoing-queue connection) (cons type packet)))
+  (q:blocking-queue-push! (outgoing-queue connection) (cons type packet))
+  t)
 
 (defmethod p:disconnected ((nest p:fundamental-nest) (connection connection) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (other-nest connection) reason)

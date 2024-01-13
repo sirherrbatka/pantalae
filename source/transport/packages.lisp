@@ -100,4 +100,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (#:tw #:pantalea.utils.timing-wheel)
    (#:sk #:pantalea.utils.skip-list))
   (:export
+   #:nest-implementation
    #:connection))
