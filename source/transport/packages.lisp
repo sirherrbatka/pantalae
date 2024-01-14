@@ -65,6 +65,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:start-networking
    #:networking
    #:packet
+   #:pong-timeout-promise
+   #:disconnect*
    #:+type-gossip+
    #:+type-ping+
    #:+type-pong+

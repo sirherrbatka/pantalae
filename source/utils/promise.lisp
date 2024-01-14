@@ -153,6 +153,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (fullfill! promise))
                (content promise)))))
 
+(defgeneric cancel! (promise))
+
+(defmethod cancel! ((promise single-promise))
+  (bind (((:accessors lock cvar result fullfilled) promise))
+    (bt:with-lock-held (lock)
+      (unless fullfilled
+        (setf result nil
+              fullfilled t)))))
+
 (defun make-promise (callback)
   (make 'single-promise
         :callback callback

@@ -76,3 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (bt:with-lock-held (dependent-lock)
           (vector-push-extend a dependent)))
       nil)))
+
+(defmacro with-lock-held ((cell) &body body)
+  `(bt:with-lock-held ((terminated-lock ,cell))
+     ,@body))

@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric connected (nest destination connection))
 (defgeneric failed-to-connect (nest destination reason))
 (defgeneric connect* (nest destination))
+(defgeneric disconnect* (nest connection))
 (defgeneric schedule-to-event-loop/no-lock (nest promise &optional delay))
 (defgeneric schedule-to-event-loop* (nest promise &optional delay))
 (defgeneric stop-nest* (nest))

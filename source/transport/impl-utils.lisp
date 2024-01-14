@@ -41,10 +41,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (p:send-packet connection p:+type-pong+ +empty-packet+))
 
 (defun schedule-ping (nest connection)
-  (flet ((pinging ()
-           (if (send-ping connection)
-               (setf (p:ping-at connection) (local-time:now))
-               (log4cl:log-warn "Ping not sent!"))))
+  (labels ((timeout ()
+             (log4cl:log-warn "No pong response!"))
+           (pinging ()
+             (if (send-ping connection)
+                 (let ((promise (promise:promise (timeout))))
+                   (setf (p:ping-at connection) (local-time:now)
+                         (p:pong-timeout-promise connection) promise)
+                   (p:schedule-to-event-loop* nest
+                                              promise
+                                              +ping-delay+))
+                 (log4cl:log-warn "Ping not sent!"))))
     (log4cl:log-debug "Scheduling ping!")
     (p:schedule-to-event-loop* nest
                                #'pinging

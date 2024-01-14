@@ -45,5 +45,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod send-packet ((connection dead-connection) type packet)
   nil)
 
+(defmethod send-packet :around ((connection fundamental-connection) type packet)
+  (pantalea.utils.dependency:with-lock-held (connection)
+    (call-next-method)))
+
 (defmethod pantalea.utils.dependency:dead-class ((connection fundamental-connection))
   'dead-connection)

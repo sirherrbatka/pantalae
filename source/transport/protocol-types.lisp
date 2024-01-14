@@ -67,9 +67,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor ping-at)
    (%pong-at
     :initarg :pong-at
-    :accessor pong-at))
+    :accessor pong-at)
+   (%pong-timeout-promise
+    :initarg :pong-timeout-promise
+    :accessor pong-timeout-promise))
   (:default-initargs
    :ping-at nil
+   :pong-timeout-promise nil
    :pong-at nil))
 
 (defclass dead-connection (fundamental-connection)

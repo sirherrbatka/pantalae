@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:dead-class
    #:kill
    #:deadp
+   #:with-lock-held
    #:depend))
 
 (cl:defpackage #:pantalea.utils.timing-wheel

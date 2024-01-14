@@ -74,6 +74,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-pong+)) packet)
   (log4cl:log-debug "Got pong.")
   (setf (p:pong-at connection) (local-time:now))
+  (when-let ((pong-timeout-promise (p:pong-timeout-promise connection)))
+    (promise:cancel! pong-timeout-promise))
   (schedule-ping nest connection)
   nil)
 
