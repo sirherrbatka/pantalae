@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:channel-nest
    #:opened-message<-enveloped-gossip
    #:send-packet
+   #:send-packet*
    #:connect*
    #:disconnected
    #:connected

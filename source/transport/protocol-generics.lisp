@@ -58,6 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric start-nest* (eest))
 (defgeneric handle-incoming-packet* (nest connection type packet))
 (defgeneric send-packet (connection type packet))
+(defgeneric send-packet* (nest connection type packet))
 (defgeneric stop-networking (nest networking))
 (defgeneric start-networking (nest networking))
 (defgeneric networking (nest type))
