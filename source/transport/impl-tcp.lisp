@@ -287,6 +287,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:connect* ((nest p:fundamental-nest) (destination ip-destination))
   (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
 
+(defmethod p:disconnect* ((nest p:fundamental-nest) (bundle socket-bundle))
+  (bt:with-lock-held ((lock bundle))
+    (setf (terminating bundle) (promise:promise t)))
+  nil)
+
 (defmethod p:stop-networking ((nest p:fundamental-nest) (networking networking))
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024

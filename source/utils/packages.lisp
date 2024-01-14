@@ -73,6 +73,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:eager-promise
    #:single-promise-success-p
    #:force!
+   #:cancel!
    #:promise
    #:combine
    #:make-promise))

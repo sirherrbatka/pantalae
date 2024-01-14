@@ -51,3 +51,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod pantalea.utils.dependency:dead-class ((connection fundamental-connection))
   'dead-connection)
+
+(defmethod disconnect* ((nest fundamental-nest) (connection dead-connection))
+  nil)

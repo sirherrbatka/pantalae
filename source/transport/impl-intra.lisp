@@ -83,6 +83,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (setf (aref connections last-index) nil)
       (decf (fill-pointer connections)))))
 
+(defmethod p:disconnect* ((nest p:fundamental-nest) (connection connection))
+  (let ((promise (promise:promise t)))
+    (q:blocking-queue-push! (incoming-queue connection)
+                            promise)
+    nil))
+
 (defmethod p:stop-networking ((nest p:fundamental-nest) (networking networking))
   (log4cl:log-info "Stopping networking.")
   (~> networking

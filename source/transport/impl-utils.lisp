@@ -42,12 +42,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun schedule-ping (nest connection)
   (labels ((timeout ()
-             (log4cl:log-warn "No pong response!"))
+             (log4cl:log-warn "No pong response!")
+             (p:disconnect* nest connection))
            (pinging ()
              (if (send-ping connection)
                  (let ((promise (promise:promise (timeout))))
                    (setf (p:ping-at connection) (local-time:now)
                          (p:pong-timeout-promise connection) promise)
+                   ;; will be canceled if pong arrives in time
                    (p:schedule-to-event-loop* nest
                                               promise
                                               +ping-delay+))
