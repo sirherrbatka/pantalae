@@ -41,6 +41,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "dep")
                              (:file "promise")
                              (:file "timing-wheel")))
+               (:module "cryptography"
+                :components ((:file "package")
+                             (:file "generics")
+                             (:file "utils")
+                             (:file "types")
+                             (:file "functions")
+                             (:file "methods")))
                (:module "transport"
                 :components ((:file "packages")
                              (:file "protocol-variables")

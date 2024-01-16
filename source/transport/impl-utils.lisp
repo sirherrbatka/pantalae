@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun schedule-ping (nest connection)
   (labels ((timeout ()
-             (log4cl:log-warn "No pong response!")
+             (log4cl:log-warn "No pong response, disconnecting connection!")
              (p:disconnect* nest connection))
            (pinging ()
              (if (send-ping connection)
