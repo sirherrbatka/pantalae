@@ -46,8 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (values (subseq result 32 64)
             (subseq result 64))))
 
-(defmethod extended-triple-diffie-hellman* ((client-a remote-client)
-                                           (client-b local-client))
+(defmethod extended-triple-diffie-hellman* ((client-a client)
+                                            (client-b client))
   (let* ((dh1 (exchange-25519-key (private (signed-pre-key client-a))
                                   (public (long-term-identity-key client-b))))
          (dh2 (exchange-25519-key (private (long-term-identity-key client-a))
@@ -59,10 +59,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (slot-value client-a '%shared-key) (concatenate '(simple-array (unsigned-byte 8) (*))
                                                           dh1 dh2 dh3 dh4)
           (slot-value client-b '%shared-key) (slot-value client-a '%shared-key))))
-
-(defmethod extended-triple-diffie-hellman* ((client-a local-client)
-                                           (client-b remote-client))
-  (extended-triple-diffie-hellman client-b client-a))
 
 (defmethod private-key ((ratchet diffie-hellman-ratchet))
   (private (keys ratchet)))
@@ -116,6 +112,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod decrypt ((double-ratchet double-ratchet)
                     cipher)
-  (decrypt* (remote-client double-ratchet)
-            (local-client double-ratchet)
+  (decrypt* (local-client double-ratchet)
+            (remote-client double-ratchet)
             cipher))
