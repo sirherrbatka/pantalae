@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (conspack:defencoding keys-pair
   %private)
 
-
 (defclass chain ()
   ((%kdf :initarg :kdf
          :reader kdf)
@@ -53,8 +52,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :steps 0
    :iteration-count 4
-   :kdf (ironclad:make-kdf :hmac-kdf :digest :tree-hash)
-   :key (ironclad:make-random-salt)))
+   :kdf (ic:make-kdf :hmac-kdf :digest :tree-hash)
+   :key (ic:make-random-salt)))
 
 (defclass symmetric-ratchet ()
   ((%chain :initarg :chain
@@ -62,7 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%constant :initarg :constant
               :reader constant))
   (:default-initargs
-   :constant (ironclad:make-random-salt 0)))
+   :constant (ic:make-random-salt 0)))
 
 (defclass diffie-hellman-ratchet ()
   ((%root-ratchet :initarg :root-ratchet
@@ -106,3 +105,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  :reader this-client)
    (%other-client :initarg :other-client
                   :reader other-client)))
+
+(defclass double-ratchet ()
+  ((%local-client
+    :initarg :local-client
+    :accessor local-client)
+   (%remote-client
+    :initarg :remote-client
+    :accessor remote-client)))
