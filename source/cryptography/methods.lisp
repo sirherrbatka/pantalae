@@ -94,39 +94,41 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                      (other-client client)
                      message
                      start
-                     end)
+                     end
+                     result)
   (multiple-value-bind (key iv)
       (~> this-client
           diffie-hellman-ratchet
           sending-ratchet
           next-key)
-    (lret ((result (copy-array message)))
-      (ic:encrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
-                  message
-                  result
-                  :ciphertext-end end
-                  :ciphertext-start start
-                  :plaintext-start start
-                  :plaintext-end end))))
+    (ic:encrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
+                message
+                result
+                :ciphertext-end end
+                :ciphertext-start start
+                :plaintext-start start
+                :plaintext-end end)
+    result))
 
 (defmethod decrypt* ((this-client client)
                      (other-client client)
                      cipher
                      start
-                     end)
+                     end
+                     result)
   (multiple-value-bind (key iv)
       (~> this-client
           diffie-hellman-ratchet
           receiving-ratchet
           next-key)
-    (lret ((result (copy-array cipher)))
-      (ic:decrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
-                  cipher
-                  result
-                  :plaintext-start start
-                  :plaintext-end end
-                  :ciphertext-start start
-                  :ciphertext-end end))))
+    (ic:decrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
+                cipher
+                result
+                :plaintext-start start
+                :plaintext-end end
+                :ciphertext-start start
+                :ciphertext-end end)
+    result))
 
 (defmethod rotate-ratchet ((this-client client) public-key)
   (when (null (keys this-client))
@@ -141,12 +143,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod encrypt ((double-ratchet double-ratchet)
                     message
                     start
-                    end)
+                    end
+                    &optional (result (copy-array message)))
   (let ((result (encrypt* (local-client double-ratchet)
                           (remote-client double-ratchet)
                           message
                           start
-                          end)))
+                          end
+                          result)))
     (list
      (public (keys (local-client double-ratchet)))
      result)))
@@ -155,11 +159,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     cipher
                     key
                     start
-                    end)
+                    end
+                    &optional (result (copy-array cipher)))
   (setf (public (keys (remote-client double-ratchet))) key)
   (rotate-ratchet (local-client double-ratchet) key)
   (decrypt* (local-client double-ratchet)
             (remote-client double-ratchet)
             cipher
             start
-            end))
+            end
+            result))
