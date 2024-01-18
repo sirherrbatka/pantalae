@@ -145,15 +145,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     start
                     end
                     &optional (result (copy-array message)))
-  (let ((result (encrypt* (local-client double-ratchet)
-                          (remote-client double-ratchet)
-                          message
-                          start
-                          end
-                          result)))
-    (list
-     (public (keys (local-client double-ratchet)))
-     result)))
+  (bt:with-lock-held ((lock double-ratchet))
+    (let ((result (encrypt* (local-client double-ratchet)
+                            (remote-client double-ratchet)
+                            message
+                            start
+                            end
+                            result)))
+      (list
+       (public (keys (local-client double-ratchet)))
+       result))))
 
 (defmethod decrypt ((double-ratchet double-ratchet)
                     cipher
@@ -161,11 +162,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     start
                     end
                     &optional (result (copy-array cipher)))
-  (setf (public (keys (remote-client double-ratchet))) key)
-  (rotate-ratchet (local-client double-ratchet) key)
-  (decrypt* (local-client double-ratchet)
-            (remote-client double-ratchet)
-            cipher
-            start
-            end
-            result))
+  (bt:with-lock-held ((lock double-ratchet))
+    (setf (public (keys (remote-client double-ratchet))) key)
+    (rotate-ratchet (local-client double-ratchet) key)
+    (decrypt* (local-client double-ratchet)
+              (remote-client double-ratchet)
+              cipher
+              start
+              end
+              result)))

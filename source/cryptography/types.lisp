@@ -117,9 +117,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                   :reader other-client)))
 
 (defclass double-ratchet ()
-  ((%local-client
+  ((%lock
+    :initarg :lock
+    :reader lock)
+   (%local-client
     :initarg :local-client
     :accessor local-client)
    (%remote-client
     :initarg :remote-client
-    :accessor remote-client)))
+    :accessor remote-client))
+  (:default-initargs
+   :lock (bt:make-lock)))
