@@ -337,3 +337,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:start-networking ((nest p:fundamental-nest) (networking networking))
   (run-server-socket nest))
+
+(defmethod p:map-connections ((networking networking) function)
+  (map nil function (socket-bundles networking)))

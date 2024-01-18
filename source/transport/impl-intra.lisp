@@ -179,3 +179,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (~> nest intra-networking connections
             last-elt (run-connection nest (curry #'p:connected nest destination connection)))
         connection))))
+
+(defmethod p:map-connections ((networking networking) function)
+  (map nil function (connections networking)))
