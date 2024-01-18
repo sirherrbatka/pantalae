@@ -62,3 +62,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric stop-networking (nest networking))
 (defgeneric start-networking (nest networking))
 (defgeneric networking (nest type))
+(defgeneric long-term-identity-remote-key (connection))
+(defgeneric map-connections (networking function))

@@ -74,6 +74,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:packet
    #:pong-timeout-promise
    #:disconnect*
+   #:long-term-identity-remote-key
+   #:map-connections
    #:+type-gossip+
    #:+type-keys+
    #:+type-echo+

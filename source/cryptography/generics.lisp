@@ -47,3 +47,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric rotate-ratchet (this-client public-key))
 (defgeneric encrypt (double-ratchet message start end &optional result))
 (defgeneric decrypt (double-ratchet cippher key start end &optional result))
+(defgeneric long-term-identity-remote-key (double-ratchet))

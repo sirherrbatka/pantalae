@@ -54,3 +54,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod disconnect* ((nest fundamental-nest) (connection dead-connection))
   nil)
+
+(defmethod long-term-identity-remote-key ((connection fundamental-connection))
+  (~> connection double-ratchet long-term-identity-remote-key))

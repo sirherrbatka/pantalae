@@ -171,3 +171,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               start
               end
               result)))
+
+(defmethod long-term-identity-remote-key ((object double-ratchet))
+  (~> object remote-client long-term-identity-key public))

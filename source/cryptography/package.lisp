@@ -31,5 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:encrypt
    #:make-double-ratchet
    #:decrypt
+   #:long-term-identity-remote-key
    #:keys-load
    #:keys-save))
