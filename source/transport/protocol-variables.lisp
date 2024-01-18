@@ -28,3 +28,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (alexandria:define-constant +type-pong+ 2)
 (alexandria:define-constant +type-route-discovery+ 3)
 (alexandria:define-constant +type-data+ 4)
+(alexandria:define-constant +type-keys+ 5)
+(alexandria:define-constant +type-echo+ 6)

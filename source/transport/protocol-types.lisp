@@ -40,24 +40,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :routes nil))
 
 (defclass fundamental-nest ()
-  ((%channels
-    :initarg :channels
-    :accessor channels)
-   (%connections
-    :initarg :connections
-    :accessor connections)
-   (%peers
+  ((%peers
     :initarg :peers
     :accessor peers)
    (%main-nest-lock
     :initarg :main-nest-lock
     :reader main-nest-lock)
-   (%public-key
-    :initarg :public-key
-    :accessor public-key)
-   (%private-key
-    :initarg :private-key
-    :accessor private-key))
+   (%long-term-identity-key
+    :initarg :long-term-identity-key
+    :accessor long-term-identity-key))
   (:default-initargs
    :main-nest-lock (bt:make-lock "NEST lock")))
 
@@ -70,9 +61,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor pong-at)
    (%pong-timeout-promise
     :initarg :pong-timeout-promise
-    :accessor pong-timeout-promise))
+    :accessor pong-timeout-promise)
+   (%double-ratchet
+    :initarg :double-ratchet
+    :accessor double-ratchet))
   (:default-initargs
    :ping-at nil
+   :double-ratchet nil
    :pong-timeout-promise nil
    :pong-at nil))
 

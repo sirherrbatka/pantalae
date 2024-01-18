@@ -27,3 +27,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (local-time:make-timestamp :day (day gossip)
                              :sec (sec gossip)
                              :nsce (nsec gossip)))
+
+(defun make-double-ratchet-local-client (nest)
+  (~> nest long-term-identity-key dr:make-local-client))
+
+(defun send-keys (connection local-client)
+  (~>> local-client
+       dr:client-public-keys
+       conspack:encode
+       (send-packet connection +type-keys+)))
+
+(defun set-double-ratchet (connection local-client remote-client-keys)
+  (let ((remote-client (apply #'dr:make-remote-client remote-client-keys)))
+    (setf (double-ratchet connection) (dr:make-double-ratchet local-client remote-client))))

@@ -25,7 +25,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:local-nicknames
    (#:ic #:ironclad))
   (:export
+   #:make-local-client
+   #:make-remote-client
+   #:client-public-keys
    #:encrypt
+   #:make-double-ratchet
    #:decrypt
    #:keys-load
    #:keys-save))

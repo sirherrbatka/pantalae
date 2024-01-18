@@ -30,8 +30,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defclass keys-pair (public-key)
   ((%private :initarg :private
-              :initform nil
-              :accessor private)))
+             :initform nil
+             :accessor private)))
+
+(conspack:defencoding ic:curve25519-public-key
+  ic::y)
+
+(conspack:defencoding ic:curve25519-private-key
+  ic::x ic::y)
 
 (conspack:defencoding public-key
   %public)
@@ -65,7 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defclass diffie-hellman-ratchet ()
   ((%root-ratchet :initarg :root-ratchet
-                  :reader root-ratchet)
+                  :accessor root-ratchet)
    (%receiving-ratchet :initarg :receiving-ratchet
                        :accessor receiving-ratchet)
    (%sending-ratchet :initarg :sending-ratchet
@@ -74,6 +80,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass client ()
   ((%long-term-identity-key :initarg :long-term-identity-key
                             :reader long-term-identity-key)
+   (%ephemeral-key-1 :initarg :ephemeral-key-1
+                     :accessor ephemeral-key-1)
+   (%ephemeral-key-2 :initarg :ephemeral-key-2
+                     :accessor ephemeral-key-2)
+   (%ephemeral-key-3 :initarg :ephemeral-key-3
+                     :accessor ephemeral-key-3)
+   (%ephemeral-key-4 :initarg :ephemeral-key-4
+                     :accessor ephemeral-key-4)
    (%shared-key :initarg :shared-key
                 :reader shared-key)
    (%keys :initarg :keys
@@ -81,24 +95,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%diffie-hellman-ratchet :initarg :diffie-hellman-ratchet
                             :accessor diffie-hellman-ratchet))
   (:default-initargs
-   :keys nil
+   :keys (make-25519-keys)
+   :ephemeral-key-1 (make-25519-keys)
+   :ephemeral-key-2 (make-25519-keys)
+   :ephemeral-key-3 (make-25519-keys)
+   :ephemeral-key-4 (make-25519-keys)
    :long-term-identity-key (make-25519-keys)))
 
 (defclass remote-client (client)
-  ((%signed-pre-key :initarg :signed-pre-key
-                    :reader signed-pre-key)
-   (%one-time-pre-keys :initarg :one-time-pre-keys
-                       :accessor one-time-pre-keys))
+  ()
   (:default-initargs
-   :keys (make-25519-keys)
-   :signed-pre-key (make-25519-keys)
-   :one-time-pre-keys (make-25519-keys)))
+   :keys (make-25519-keys)))
 
 (defclass local-client (client)
-  ((%ephemeral-key :initarg :ephemeral-key
-                   :accessor ephemeral-key))
-  (:default-initargs
-   :ephemeral-key (make-25519-keys)))
+  ())
 
 (defclass session ()
   ((%this-client :initarg :this-client

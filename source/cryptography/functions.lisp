@@ -52,8 +52,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                    :receiving-ratchet recv-chain
                    :sending-ratchet send-ratchet)))
 
-(defun extended-triple-diffie-hellman (this-client other-client)
-  (extended-triple-diffie-hellman* this-client other-client)
+(defun exchange-keys (this-client other-client)
+  (exchange-keys* this-client other-client)
   (setf (slot-value this-client '%diffie-hellman-ratchet) (make-diffie-hellman-ratchet (shared-key this-client))
         (slot-value other-client '%diffie-hellman-ratchet) (make-diffie-hellman-ratchet (shared-key other-client)))
   nil)
@@ -61,7 +61,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defun make-double-ratchet (local-client remote-client)
   (check-type local-client local-client)
   (check-type remote-client remote-client)
-  (extended-triple-diffie-hellman *local-client* *remote-client*)
+  (exchange-keys local-client remote-client)
   (make-instance 'double-ratchet
                   :local-client local-client
                   :remote-client remote-client))
+
+(defun client-public-keys (client)
+  (list (public (long-term-identity-key client))
+        (public (ephemeral-key-1 client))
+        (public (ephemeral-key-2 client))
+        (public (ephemeral-key-3 client))
+        (public (ephemeral-key-4 client))))
+
+(defun make-local-client (long-term-identity-key)
+  (make-instance 'local-client
+                 :long-term-identity-key long-term-identity-key))
+
+(defun make-remote-client (public-long-term-identity-key eph1 eph2 eph3 eph4)
+  (make-instance 'remote-client
+                 :long-term-identity-key (make-instance 'keys-pair :public public-long-term-identity-key)
+                 :ephemeral-key-1 (make-instance 'keys-pair :public eph1)
+                 :ephemeral-key-2 (make-instance 'keys-pair :public eph2)
+                 :ephemeral-key-3 (make-instance 'keys-pair :public eph3)
+                 :ephemeral-key-4 (make-instance 'keys-pair :public eph4)))

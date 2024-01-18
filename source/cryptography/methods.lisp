@@ -23,6 +23,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.cryptography)
 
 
+(defmethod print-object ((object keys-pair) stream)
+  (print-unreadable-object (object stream)
+    (format stream "public: ~a private: ~a" (public object) (private object))))
+
+(defmethod print-object ((object client) stream)
+  (print-unreadable-object (object stream)
+    (format stream "ID: ~a EPH: ~a" (long-term-identity-key object) (ephemeral-key object))))
+
 (defmethod forward ((chain chain) bytes &optional (length 32))
   (let* ((chain-key-length (chain-key-length chain))
          (output (ic:derive-key (kdf chain)
@@ -46,19 +54,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (values (subseq result 32 64)
             (subseq result 64))))
 
-(defmethod extended-triple-diffie-hellman* ((client-a client)
-                                            (client-b client))
-  (let* ((dh1 (exchange-25519-key (private (signed-pre-key client-a))
-                                  (public (long-term-identity-key client-b))))
-         (dh2 (exchange-25519-key (private (long-term-identity-key client-a))
-                                  (public (ephemeral-key client-b))))
-         (dh3 (exchange-25519-key (private (signed-pre-key client-a))
-                                  (public (ephemeral-key client-b))))
-         (dh4 (exchange-25519-key (private (one-time-pre-keys client-a))
-                                  (public (ephemeral-key client-b)))))
-    (setf (slot-value client-a '%shared-key) (concatenate '(simple-array (unsigned-byte 8) (*))
-                                                          dh1 dh2 dh3 dh4)
-          (slot-value client-b '%shared-key) (slot-value client-a '%shared-key))))
+(defmethod exchange-keys* ((client-a local-client)
+                           (client-b remote-client))
+  (if (iterate
+        (for a in-vector (~> client-a long-term-identity-key public ironclad:curve25519-key-y))
+        (for b in-vector (~> client-b long-term-identity-key public ironclad:curve25519-key-y))
+        (finding t such-that (> a b))
+        (finding nil such-that (< a b)))
+      (let* ((dh1 (exchange-25519-key (~> client-a long-term-identity-key private)
+                                      (~> client-b ephemeral-key-1 public)))
+             (dh2 (exchange-25519-key (~> client-a ephemeral-key-2 private)
+                                      (~> client-b long-term-identity-key public)))
+             (dh3 (exchange-25519-key (~> client-a ephemeral-key-3 private)
+                                      (~> client-b long-term-identity-key public)))
+             (dh4 (exchange-25519-key (~> client-a ephemeral-key-4 private)
+                                      (~> client-b long-term-identity-key public))))
+        (setf (slot-value client-a '%shared-key) (concatenate '(simple-array (unsigned-byte 8) (*)) dh1 dh2 dh3 dh4)
+              (slot-value client-b '%shared-key) (slot-value client-a '%shared-key)))
+      (let* ((dh1 (exchange-25519-key (~> client-a ephemeral-key-1 private)
+                                      (~> client-b long-term-identity-key public)))
+             (dh2 (exchange-25519-key (~> client-a long-term-identity-key private)
+                                      (~> client-b ephemeral-key-2 public)))
+             (dh3 (exchange-25519-key (~> client-a long-term-identity-key  private)
+                                      (~> client-b ephemeral-key-3 public)))
+             (dh4 (exchange-25519-key (~> client-a long-term-identity-key private)
+                                      (~> client-b ephemeral-key-4 public))))
+        (setf (slot-value client-a '%shared-key) (concatenate '(simple-array (unsigned-byte 8) (*))
+                                                              dh1 dh2 dh3 dh4)
+              (slot-value client-b '%shared-key) (slot-value client-a '%shared-key))))
+  nil)
 
 (defmethod private-key ((ratchet diffie-hellman-ratchet))
   (private (keys ratchet)))
@@ -68,8 +92,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod encrypt* ((this-client client)
                      (other-client client)
-                     message)
-  (rotate-ratchet this-client (public (keys other-client)))
+                     message
+                     start
+                     end)
   (multiple-value-bind (key iv)
       (~> this-client
           diffie-hellman-ratchet
@@ -78,12 +103,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (lret ((result (copy-array message)))
       (ic:encrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
                   message
-                  result))))
+                  result
+                  :ciphertext-end end
+                  :ciphertext-start start
+                  :plaintext-start start
+                  :plaintext-end end))))
 
 (defmethod decrypt* ((this-client client)
                      (other-client client)
-                     cipher)
-  (rotate-ratchet this-client (public (keys other-client)))
+                     cipher
+                     start
+                     end)
   (multiple-value-bind (key iv)
       (~> this-client
           diffie-hellman-ratchet
@@ -92,10 +122,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (lret ((result (copy-array cipher)))
       (ic:decrypt (ic:make-cipher :aes :key key :mode :cbc :initialization-vector iv)
                   cipher
-                  result))))
+                  result
+                  :plaintext-start start
+                  :plaintext-end end
+                  :ciphertext-start start
+                  :ciphertext-end end))))
 
 (defmethod rotate-ratchet ((this-client client) public-key)
-  (unless (null (keys this-client))
+  (when (null (keys this-client))
     (let* ((dh-recv (ic:diffie-hellman (private (keys this-client)) public-key))
            (shared-recv (~> this-client diffie-hellman-ratchet root-ratchet (next-key dh-recv))))
       (setf (receiving-ratchet (diffie-hellman-ratchet this-client)) (make-symmetric-ratchet shared-recv))))
@@ -105,13 +139,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (sending-ratchet (diffie-hellman-ratchet this-client)) (make-symmetric-ratchet shared-send))))
 
 (defmethod encrypt ((double-ratchet double-ratchet)
-                    message)
-  (encrypt* (local-client double-ratchet)
-            (remote-client double-ratchet)
-            message))
+                    message
+                    start
+                    end)
+  (let ((result (encrypt* (local-client double-ratchet)
+                          (remote-client double-ratchet)
+                          message
+                          start
+                          end)))
+    (list
+     (public (keys (local-client double-ratchet)))
+     result)))
 
 (defmethod decrypt ((double-ratchet double-ratchet)
-                    cipher)
+                    cipher
+                    key
+                    start
+                    end)
+  (setf (public (keys (remote-client double-ratchet))) key)
+  (rotate-ratchet (local-client double-ratchet) key)
   (decrypt* (local-client double-ratchet)
             (remote-client double-ratchet)
-            cipher))
+            cipher
+            start
+            end))

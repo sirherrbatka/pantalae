@@ -107,27 +107,42 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-info "Starting networking.")
   networking)
 
-(defun run-connection (connection nest)
+(defun run-connection (connection nest promise)
   (setf (thread connection)
         (bt:make-thread
-         (lambda ()
-           (log4cl:log-info "Starting connection thread.")
-           (iterate
-             (with incoming-queue = (incoming-queue connection))
-             (for elt = (q:blocking-queue-pop! incoming-queue))
-             (if (consp elt)
-                 (bind (((type . packet) elt))
-                   (p:schedule-to-event-loop* nest
-                                              (curry #'p:handle-incoming-packet*
-                                                     nest
-                                                     connection
-                                                     type
-                                                     packet)))
-                 (progn (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
-                        (p:schedule-to-event-loop* nest (curry #'p:disconnected nest connection nil))
-                        (promise:fullfill! elt)
-                        (leave)))))))
-  connection)
+         (lambda (&aux (end nil))
+           (unwind-protect
+                (bind ((local-client (p:make-double-ratchet-local-client nest))
+                       (incoming-queue (incoming-queue connection))
+                       ((:flet read-connection ())
+                        (let ((elt (q:blocking-queue-pop! incoming-queue)))
+                          (if (consp elt)
+                              (return-from read-connection (values (car elt) (cdr elt)))
+                              (progn
+                                (setf end elt)
+                                (error "Ending thread!")
+                                )))))
+                  (log4cl:log-info "Starting connection thread.")
+                  (p:send-keys connection local-client)
+                  (iterate
+                    (for (values type packet) = (read-connection))
+                    (when (= type p:+type-keys+)
+                      (p:set-double-ratchet connection local-client (conspack:decode packet))
+                      (leave)))
+                  (when promise
+                    (p:schedule-to-event-loop* nest promise))
+                  (iterate
+                    (for (values type packet) = (read-connection))
+                    (p:schedule-to-event-loop* nest
+                                               (curry #'p:handle-incoming-packet*
+                                                      nest
+                                                      connection
+                                                      type
+                                                      packet))))
+             (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
+             (p:schedule-to-event-loop* nest (curry #'p:disconnected nest connection nil))
+             (when end
+               (promise:fullfill! end)))))))
 
 (defun make-connection (destination-nest origin-nest)
   (bt:with-lock-held ((~> destination-nest intra-networking lock))
@@ -139,12 +154,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                 :outgoing-queue queue-b)
                           (~> destination-nest intra-networking connections))
       (~> destination-nest intra-networking
-          connections last-elt (run-connection destination-nest))
-      (p:schedule-to-event-loop/no-lock destination-nest
-                                        (curry #'p:connected destination-nest
-                                               (make 'destination
-                                                     :other-nest origin-nest)
-                                               (~> destination-nest intra-networking connections last-elt)))
+          connections last-elt
+          (run-connection destination-nest
+                          (curry #'p:connected destination-nest
+                                 (make 'destination
+                                       :other-nest origin-nest)
+                                 (~> destination-nest intra-networking connections last-elt))))
       (make 'connection
             :other-nest destination-nest
             :incoming-queue queue-b
@@ -162,6 +177,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (let ((connection (~> destination other-nest (make-connection nest))))
         (vector-push-extend connection (~> nest intra-networking connections))
         (~> nest intra-networking connections
-            last-elt (run-connection nest))
-        (p:schedule-to-event-loop/no-lock nest (curry #'p:connected nest destination connection))
+            last-elt (run-connection nest (curry #'p:connected nest destination connection)))
         connection))))

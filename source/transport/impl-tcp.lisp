@@ -216,53 +216,74 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (ensure (socket bundle) (usocket:socket-connect (host bundle)
                                                         +tcp-port+
                                                         :element-type '(unsigned-byte 8)
-                                                        :timeout +tcp-timeout+))
-        (promise:fullfill! on-success))
+                                                        :timeout +tcp-timeout+)))
     (error (e)
       (promise:fullfill! on-fail :value e :success nil)
-      (p:schedule-to-event-loop/no-lock nest (promise:promise (p:failed-to-connect nest destination e)))
+      (p:schedule-to-event-loop* nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
-  (unwind-protect
-       (handler-case
-           (iterate
-             (with socket = (socket bundle))
-             (for terminating = (with-socket-bundle-locked (bundle)
-                                  (terminating bundle)))
-             (when terminating (leave))
-             (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
-             (when (null r-socket) (next-iteration))
-             (for buffer = nil)
-             (for type = nil)
-             (with-socket-bundle-locked (bundle)
-               (let ((stream (usocket:socket-stream socket)))
-                 (setf type (nibbles:read-ub16/be stream))
-                 (bind ((length (nibbles:read-ub16/be stream)))
-                   (setf buffer (make-array length :element-type '(unsigned-byte 8)))
-                   (iterate
-                     (for i from 0 below length)
-                     (setf (aref buffer i) (read-byte stream)))
-                   (incf (total-bytes bundle) length))))
-             (p:schedule-to-event-loop* nest
-                                        (curry #'p:handle-incoming-packet*
-                                               nest
-                                               bundle
-                                               type
-                                               buffer)))
-         (error (er)
-           (setf e er)))
-    (with-socket-bundle-locked (bundle)
-      (when-let ((socket (socket bundle)))
-        (ignore-errors (usocket:socket-close socket))
-        (setf (socket bundle) nil)))
-    (with-socket-bundle-locked (bundle)
-      (when-let ((terminating (terminating bundle)))
-        (setf e :terminated)
-        (promise:fullfill! terminating)))
-    (unless (member e '(nil :terminated))
-      (log4cl:log-error "Socket thread has been stopped because ~a" e))
-    (p:schedule-to-event-loop/no-lock nest
-                                      (promise:promise
-                                        (p:disconnected nest bundle e)))))
+  (bind ((local-client (p:make-double-ratchet-local-client nest))
+         (socket (socket bundle))
+         (connected nil)
+         ((:flet read-socket ())
+          (iterate
+            (for terminating = (with-socket-bundle-locked (bundle)
+                                 (terminating bundle)))
+            (when terminating (error "Ending thread!"))
+            (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
+            (when (null r-socket) (next-iteration))
+            (for buffer = nil)
+            (for type = nil)
+            (with-socket-bundle-locked (bundle)
+              (let ((stream (usocket:socket-stream socket)))
+                (setf type (nibbles:read-ub16/be stream))
+                (bind ((length (nibbles:read-ub16/be stream)))
+                  (setf buffer (make-array length :element-type '(unsigned-byte 8)))
+                  (iterate
+                    (for i from 0 below length)
+                    (setf (aref buffer i) (read-byte stream)))
+                  (incf (total-bytes bundle) length))))
+            (return (values type buffer)))))
+    (unwind-protect
+         (handler-case
+             (let ((keys-timeout (p:schedule-to-event-loop* (promise:promise (p:disconnect* nest bundle))
+                                                            30000)))
+               (p:send-keys bundle local-client)
+               (iterate
+                 (for (values type buffer) = (read-socket))
+                 (when (= type p:+type-keys+)
+                   (p:set-double-ratchet bundle local-client (conspack:decode buffer))
+                   (leave)))
+               (promise:cancel! keys-timeout)
+               (setf connected t)
+               (promise:fullfill! on-success)
+               (iterate
+                 (for (values type buffer) = (read-socket))
+                 (p:schedule-to-event-loop* nest
+                                            (curry #'p:handle-incoming-packet*
+                                                   nest
+                                                   bundle
+                                                   type
+                                                   buffer))))
+           (error (er)
+             (setf e er)))
+      (with-socket-bundle-locked (bundle)
+        (when-let ((socket (socket bundle)))
+          (ignore-errors (usocket:socket-close socket))
+          (setf (socket bundle) nil)))
+      (with-socket-bundle-locked (bundle)
+        (when-let ((terminating (terminating bundle)))
+          (setf e :terminated)
+          (promise:fullfill! terminating)))
+      (unless (member e '(nil :terminated))
+        (log4cl:log-error "Socket thread has been stopped because ~a" e))
+      (if connected
+          (p:schedule-to-event-loop* nest
+                                     (promise:promise
+                                       (p:disconnected nest bundle e)
+                                       (p:failed-to-connect nest bundle e)))
+          (p:schedule-to-event-loop* nest
+                                     (promise:promise
+                                       (p:failed-to-connect nest bundle e)))))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)

@@ -22,7 +22,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 (cl:defpackage #:pantalea.transport.protocol
   (:use #:common-lisp #:pantalea.aux-package)
-  (:local-nicknames)
+  (:local-nicknames
+   (#:dr #:pantalea.cryptography))
   (:export
    #:gossip-timestamp
    #:gossip-id
@@ -61,7 +62,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:network-destination-peer
    #:schedule-to-event-loop/no-lock
    #:ping-at
+   #:send-keys
+   #:long-term-identity-key
+   #:make-double-ratchet-local-client
+   #:double-ratchet
    #:pong-at
+   #:set-double-ratchet
    #:stop-networking
    #:start-networking
    #:networking
@@ -69,6 +75,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:pong-timeout-promise
    #:disconnect*
    #:+type-gossip+
+   #:+type-keys+
+   #:+type-echo+
    #:+type-ping+
    #:+type-pong+
    #:+type-route-discovery+
@@ -78,6 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
    (#:p #:pantalea.transport.protocol)
+   (#:dr #:pantalea.cryptography)
    (#:q #:pantalea.utils.queue)
    (#:promise #:pantalea.utils.promise))
   (:export
@@ -87,6 +96,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:defpackage #:pantalea.transport.tcp
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
+   (#:dr #:pantalea.cryptography)
    (#:p #:pantalea.transport.protocol)
    (#:promise #:pantalea.utils.promise))
   (:export
@@ -97,6 +107,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
    (#:p #:pantalea.transport.protocol)
+   (#:dr #:pantalea.cryptography)
    (#:tcp #:pantalea.transport.tcp)
    (#:q #:pantalea.utils.queue)
    (#:promise #:pantalea.utils.promise)

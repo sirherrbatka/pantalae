@@ -79,6 +79,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (schedule-ping nest connection)
   nil)
 
+(defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-echo+)) packet)
+  (bind (((key data) (conspack:decode packet)))
+    (log4cl:log-info "Echo: ~a." (dr:decrypt (p:double-ratchet connection)
+                                             data
+                                             key
+                                             0
+                                             (length data)))))
+
 (defmethod p:handle-incoming-packet* ((nest nest-implementation) connection (type (eql p:+type-ping+)) packet)
   (log4cl:log-debug "Got ping.")
   (p:schedule-to-event-loop* nest (curry #'send-pong connection))
