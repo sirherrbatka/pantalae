@@ -65,6 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:connected ((nest nest-implementation) destination connection)
   (log4cl:log-info "Connection to ~a established." destination)
   (schedule-ping nest connection)
+  (p:insert-direct-route nest connection)
   nil)
 
 (defmethod p:failed-to-connect ((nest nest-implementation) destination reason)

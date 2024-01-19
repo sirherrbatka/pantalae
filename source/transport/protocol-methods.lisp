@@ -56,23 +56,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   nil)
 
 (defmethod long-term-identity-remote-key ((connection fundamental-connection))
-  (~> connection double-ratchet long-term-identity-remote-key))
+  (~> connection double-ratchet dr:long-term-identity-remote-key))
 
 (defmethod insert-direct-route ((nest fundamental-nest) connection)
-  (bind ((key (long-term-identity-key connection))
+  (bind ((key (long-term-identity-remote-key connection))
          (routing-table (routing-table nest))
          (own-routes (own-routes routing-table))
          (container (ensure (gethash key own-routes)
                       (make 'route-container
-                          :routing-table routing-table
-                          :content nil)))
-         (route (make 'direct-route :connection connection
-                                    :destination-public-key key)))
-    (pantalea.utils.dependency:depend route connection)
-    (pantalea.utils.dependency:depend container route)
+                            :content nil)))
+         (new-route (make 'direct-route :connection connection
+                                        :destination-public-key key)))
+    (pantalea.utils.dependency:depend new-route connection)
+    (pantalea.utils.dependency:depend container new-route)
     (when-let ((old-route (content container)))
-      (pantalea.utils.dependency:depend old-route (connection old-route)))
-    (setf (content container) route)
+      (pantalea.utils.dependency:undepend container old-route))
+    (setf (content container) new-route)
     nil))
 
 (defmethod connection ((route route-container))

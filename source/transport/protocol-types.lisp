@@ -31,10 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :own-routes (make-hash-table :test 'equalp)))
 
 (defclass fundamental-nest ()
-  ((%peers
-    :initarg :peers
-    :accessor peers)
-   (%routing-table
+  ((%routing-table
     :initarg :routing-table
     :reader routing-table)
    (%main-nest-lock
