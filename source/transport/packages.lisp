@@ -76,6 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:disconnect*
    #:long-term-identity-remote-key
    #:map-connections
+   #:insert-direct-route
    #:+type-gossip+
    #:+type-keys+
    #:+type-echo+

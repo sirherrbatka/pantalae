@@ -23,26 +23,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
-(defclass peer ()
-  ((%public-key
-    :initarg :public-key
-    :reader peer-public-key
-    :accessor public-key)
-   (%prefered-route
-    :initarg :prefered-route
-    :accessor prefered-route)
-   (%routes
-    :initarg :routes
-    :reader peer-routes
-    :accessor routes))
+(defclass routing-table ()
+  ((%own-routes
+    :initarg :own-routes
+    :reader own-routes))
   (:default-initargs
-   :prefered-route nil
-   :routes nil))
+   :own-routes (make-hash-table :test 'equalp)))
 
 (defclass fundamental-nest ()
   ((%peers
     :initarg :peers
     :accessor peers)
+   (%routing-table
+    :initarg :routing-table
+    :reader routing-table)
    (%main-nest-lock
     :initarg :main-nest-lock
     :reader main-nest-lock)
@@ -50,7 +44,47 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :long-term-identity-key
     :accessor long-term-identity-key))
   (:default-initargs
+   :routing-table (make 'routing-table)
    :main-nest-lock (bt:make-lock "NEST lock")))
+
+(defclass route-container (pantalea.utils.dependency:dependency-cell)
+  ((%content
+    :initarg :content
+    :accessor content)))
+
+(defclass pending-route ()
+  ((%destination-public-key
+    :initarg :destination-public-key
+    :reader destination-public-key)
+   (%established-promise
+    :initarg :on-established
+    :reader on-established)
+   (%timeout-promise
+    :initarg :timeout
+    :reader timeout-promise)))
+
+(defclass established-route (pantalea.utils.dependency:dependency-cell)
+  ((%connection
+    :initarg :connection
+    :reader connection)))
+
+(defclass own-route (established-route)
+  ((%destination-public-key
+    :initarg :destination-public-key
+    :reader destination-public-key)))
+
+(defclass direct-route (own-route)
+  ())
+
+(defclass indirect-route (own-route)
+  ((%route-id
+    :initarg :route-id
+    :reader route-id)))
+
+(defclass forwarding (established-route)
+  ((%route-id
+    :initarg :route
+    :reader route-id)))
 
 (defclass fundamental-connection (pantalea.utils.dependency:dependency-cell)
   ((%ping-at

@@ -57,3 +57,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod long-term-identity-remote-key ((connection fundamental-connection))
   (~> connection double-ratchet long-term-identity-remote-key))
+
+(defmethod insert-direct-route ((nest fundamental-nest) connection)
+  (bind ((key (long-term-identity-key connection))
+         (routing-table (routing-table nest))
+         (own-routes (own-routes routing-table))
+         (container (ensure (gethash key own-routes)
+                      (make 'route-container
+                          :routing-table routing-table
+                          :content nil)))
+         (route (make 'direct-route :connection connection
+                                    :destination-public-key key)))
+    (pantalea.utils.dependency:depend route connection)
+    (pantalea.utils.dependency:depend container route)
+    (when-let ((old-route (content container)))
+      (pantalea.utils.dependency:depend old-route (connection old-route)))
+    (setf (content container) route)
+    nil))
+
+(defmethod connection ((route route-container))
+  (~> route content connection))
+
+(defmethod destination-public-key ((route route-container))
+  (~> route content destination-public-key))
+
+(defmethod established-promise ((route route-container))
+  (~> route content established-promise))
+
+(defmethod timeout-promise ((route route-container))
+  (~> route content timeout-promise))

@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :terminated-lock (bt:make-lock)
    :dependent-lock (bt:make-lock)
    :terminatedp nil
-   :dependent (vect)))
+   :dependent (make-hash-table :test 'eq :weakness :key-and-value)))
 
 (defgeneric dead-class (object)
   (:method ((cell dependency-cell))
@@ -62,9 +62,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (when (shiftf terminatedp t)
           (return-from kill cell)))
       (bt:with-lock-held (dependent-lock)
-        (map nil
-             (lambda (dep) (on-dependency-killed dep cell))
-             dependent))
+        (maphash-values (lambda (dep) (on-dependency-killed dep cell))
+                        dependent))
       (bt:with-lock-held (terminated-lock)
         (change-class cell (dead-class cell))))
     cell))
@@ -74,7 +73,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (bind (((:accessors terminated-lock dependent-lock dependent) b))
       (bt:with-lock-held (terminated-lock)
         (bt:with-lock-held (dependent-lock)
-          (vector-push-extend a dependent)))
+          (setf (gethash a dependent) a)))
+      nil)))
+
+(defgeneric undepend (dependent dependency)
+  (:method ((a dependency-cell) (b dependency-cell))
+    (bind (((:accessors terminated-lock dependent-lock dependent) b))
+      (bt:with-lock-held (terminated-lock)
+        (bt:with-lock-held (dependent-lock)
+          (remhash a dependent)))
       nil)))
 
 (defmacro with-lock-held ((cell) &body body)
