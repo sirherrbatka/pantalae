@@ -265,6 +265,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                    type
                                                    buffer))))
            (error (er)
+             (log:info er)
              (setf e er)))
       (with-socket-bundle-locked (bundle)
         (when-let ((socket (socket bundle)))
@@ -276,14 +277,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (promise:fullfill! terminating)))
       (unless (member e '(nil :terminated))
         (log4cl:log-error "Socket thread has been stopped because ~a" e))
-      (if connected
-          (p:schedule-to-event-loop* nest
-                                     (promise:promise
-                                       (p:disconnected nest bundle e)
-                                       (p:failed-to-connect nest bundle e)))
-          (p:schedule-to-event-loop* nest
-                                     (promise:promise
-                                       (p:failed-to-connect nest bundle e)))))))
+      (ignore-errors
+       (if connected
+           (p:schedule-to-event-loop* nest
+                                      (promise:promise
+                                        (p:disconnected nest bundle e)
+                                        (p:failed-to-connect nest bundle e)))
+           (p:schedule-to-event-loop* nest
+                                      (promise:promise
+                                        (p:failed-to-connect nest bundle e))))))))
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)

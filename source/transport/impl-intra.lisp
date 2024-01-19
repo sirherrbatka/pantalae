@@ -112,35 +112,38 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (bt:make-thread
          (lambda (&aux (end nil))
            (unwind-protect
-                (bind ((local-client (p:make-double-ratchet-local-client nest))
-                       (incoming-queue (incoming-queue connection))
-                       ((:flet read-connection ())
-                        (let ((elt (q:blocking-queue-pop! incoming-queue)))
-                          (if (consp elt)
-                              (return-from read-connection (values (car elt) (cdr elt)))
-                              (progn
-                                (setf end elt)
-                                (error "Ending thread!")
-                                )))))
-                  (log4cl:log-info "Starting connection thread.")
-                  (p:send-keys connection local-client)
-                  (iterate
-                    (for (values type packet) = (read-connection))
-                    (when (= type p:+type-keys+)
-                      (p:set-double-ratchet connection local-client (conspack:decode packet))
-                      (leave)))
-                  (when promise
-                    (p:schedule-to-event-loop* nest promise))
-                  (iterate
-                    (for (values type packet) = (read-connection))
-                    (p:schedule-to-event-loop* nest
-                                               (curry #'p:handle-incoming-packet*
-                                                      nest
-                                                      connection
-                                                      type
-                                                      packet))))
+                (handler-case
+                    (bind ((local-client (p:make-double-ratchet-local-client nest))
+                           (incoming-queue (incoming-queue connection))
+                           ((:flet read-connection ())
+                            (let ((elt (q:blocking-queue-pop! incoming-queue)))
+                              (if (consp elt)
+                                  (return-from read-connection (values (car elt) (cdr elt)))
+                                  (progn
+                                    (setf end elt)
+                                    (error "Ending thread!"))))))
+                      (log4cl:log-info "Starting connection thread.")
+                      (p:send-keys connection local-client)
+                      (iterate
+                        (for (values type packet) = (read-connection))
+                        (when (= type p:+type-keys+)
+                          (p:set-double-ratchet connection local-client (conspack:decode packet))
+                          (leave)))
+                      (when promise
+                        (p:schedule-to-event-loop* nest promise))
+                      (iterate
+                        (for (values type packet) = (read-connection))
+                        (p:schedule-to-event-loop* nest
+                                                   (curry #'p:handle-incoming-packet*
+                                                          nest
+                                                          connection
+                                                          type
+                                                          packet))))
+                  (error (e)
+                    (log:info e)))
              (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
-             (p:schedule-to-event-loop* nest (curry #'p:disconnected nest connection nil))
+             (handler-case (p:schedule-to-event-loop* nest (curry #'p:disconnected nest connection nil))
+               (p:nest-stopped (e) (declare (ignore e)) nil))
              (when end
                (promise:fullfill! end)))))))
 
