@@ -55,15 +55,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod disconnect* ((nest fundamental-nest) (connection dead-connection))
   nil)
 
-(defmethod long-term-identity-remote-key ((connection fundamental-connection))
+(defmethod destination-key ((connection fundamental-connection))
   (~> connection double-ratchet dr:long-term-identity-remote-key))
 
 (defmethod insert-direct-route ((nest fundamental-nest) connection)
-  (bind ((key (long-term-identity-remote-key connection))
+  (bind ((key (destination-key connection))
          (routing-table (routing-table nest))
          (own-routes (own-routes routing-table))
          (container (ensure (gethash key own-routes)
                       (make 'route-container
+                            :routing-table routing-table
                             :content nil)))
          (new-route (make 'direct-route :connection connection
                                         :destination-public-key key)))
@@ -85,3 +86,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod timeout-promise ((route route-container))
   (~> route content timeout-promise))
+
+(defmethod pantalea.utils.dependency:dead-class ((object own-route))
+  'dead-own-route)
+
+(defmethod pantalea.utils.dependency:kill ((object route-container))
+  (clear-dead-route object (content object))
+  (call-next-method))
+
+(defmethod clear-dead-route ((container route-container) (dead-route dead-own-route))
+  (remhash (destination-public-key dead-route) (own-routes (routing-table container))))

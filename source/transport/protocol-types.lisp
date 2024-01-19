@@ -47,7 +47,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass route-container (pantalea.utils.dependency:dependency-cell)
   ((%content
     :initarg :content
-    :accessor content)))
+    :accessor content)
+   (%routing-table
+    :initarg :routing-table
+    :accessor routing-table)))
 
 (defclass pending-route ()
   ((%destination-public-key
@@ -64,6 +67,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%connection
     :initarg :connection
     :reader connection)))
+
+(defclass dead-own-route (pantalea.utils.dependency:dependency-cell)
+  ((%destination-public-key
+     :initarg :destination-public-key
+     :reader destination-public-key)))
 
 (defclass own-route (established-route)
   ((%destination-public-key
