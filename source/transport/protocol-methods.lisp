@@ -95,4 +95,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (call-next-method))
 
 (defmethod clear-dead-route ((container route-container) (dead-route own-route))
-  (remhash (destination-public-key dead-route) (own-routes (routing-table container))))
+  (remhash (destination-public-key dead-route)
+           (~> container routing-table own-routes))
+  nil)
