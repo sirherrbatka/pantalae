@@ -51,13 +51,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 data)
     data))
 
-(defun encrypt (connection packet)
+(defun encrypt (connection packet &optional (result packet))
   (conspack:encode
    (pantalea.cryptography:encrypt
     (double-ratchet connection)
     packet
     0
-    (length packet))))
+    (length packet)
+    result)))
 
 (defun run-event-loop (nest)
   (handler-case

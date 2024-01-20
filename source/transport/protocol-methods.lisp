@@ -220,7 +220,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (send-response nest connection message
                  (make 'peer-discovery-response
                        :origin-public-key (long-term-identity-key nest)
-                       :id (id message)
                        :destination (destination message))))
 
 (defmethod send-response ((nest nest) connection message response)
@@ -244,4 +243,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod send-message ((nest nest) connection message)
   (setf (destination message) (destination connection))
-  )
+  (send-packet connection
+               +type-message+
+               (encrypt connection (conspack:encode message))))

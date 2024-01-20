@@ -24,9 +24,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (conspack:defencoding response
-  %id %origin-public-key)
+  %id %encrypted-payload)
 
-(conspack:defencoding peer-discovery-response
+(conspack:defencoding response-payload
+  %origin-public-key)
+
+(conspack:defencoding peer-discovery-payload
   %destination)
 
 (conspack:defencoding message

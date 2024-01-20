@@ -156,10 +156,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :reader origin-public-key)
    (%destination
     :initarg :destination
-    :accessor destination)
-   (%lifetime
-    :initarg :lifetime
-    :accessor lifetime))
+    :accessor destination))
   (:default-initargs
    :hop-counter 0
    :lifetime #.(* 5 1000 60) ;; 5 minutes Fri Jan 19 21:03:36 2024
@@ -172,11 +169,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%id
     :initarg :id
     :reader id)
-   (%origin-public-key
+   (%encrypted-payload
+    :initarg :encrypted-payload
+    :reader encrypted-payload)))
+
+(defclass response-payload ()
+  ((%origin-public-key
     :initarg :origin-public-key
     :reader origin-public-key)))
 
-(defclass peer-discovery-response (response)
+(defclass peer-discovery-payload (response-payload)
   ((%destination
     :initarg :destination
     :reader destination)))
