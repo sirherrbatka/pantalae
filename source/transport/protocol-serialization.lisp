@@ -23,11 +23,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
-(conspack:defencoding fundamental-gossip
-  %day %sec %nsec %id %payload)
+(conspack:defencoding response
+  %id %origin-public-key)
 
-(conspack:defencoding enveloped-gossip
-  %destination-public-key)
+(conspack:defencoding peer-discovery-response
+  %destination)
 
-(conspack:defencoding route-discovery
-  %destination-public-key %forward-route %backward-route %palyoad)
+(conspack:defencoding message
+  %hop-counter %origin-public-key %id %destination)

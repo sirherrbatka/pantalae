@@ -40,3 +40,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defun set-double-ratchet (connection local-client remote-client-keys)
   (let ((remote-client (apply #'dr:make-remote-client remote-client-keys)))
     (setf (double-ratchet connection) (dr:make-double-ratchet local-client remote-client))))
+
+(defun decrypt (connection packet)
+  (bind (((key data) (conspack:decode packet)))
+    (dr:decrypt (double-ratchet connection)
+                data
+                key
+                0
+                (length data)
+                data)
+    data))
+
+(defun encrypt (connection packet)
+  (conspack:encode
+   (pantalea.cryptography:encrypt
+    (double-ratchet connection)
+    packet
+    0
+    (length packet))))
+
+(defun run-event-loop (nest)
+  (handler-case
+      (iterate
+        (with queue = (event-loop-queue nest))
+        (for callback = (q:blocking-queue-pop! queue))
+        (if (typep callback 'promise:promise)
+            (promise:fullfill! callback)
+            (funcall callback)))
+    (pantalea.utils.conditions:stop-thread (e)
+      (declare (ignore e))
+      (log4cl:log-info "Event loop has been stopped."))
+    (error (e)
+      (log4cl:log-error "Event loop has crashed with ~a" e))))

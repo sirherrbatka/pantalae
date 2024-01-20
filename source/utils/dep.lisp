@@ -26,21 +26,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass dependency-cell ()
   ((%terminated-lock
     :initarg :terminated-lock
+    :initform (bt:make-lock)
     :accessor terminated-lock)
    (%dependent-lock
     :initarg :dependent-lock
+    :initform (bt:make-lock)
     :accessor dependent-lock)
    (%dependent
     :initarg :dependent
+    :initform (make-hash-table :test 'eq :weakness :key-and-value)
     :accessor dependent)
    (%terminatedp
     :initarg :terminatedp
+    :initform nil
     :accessor terminatedp))
-  (:default-initargs
-   :terminated-lock (bt:make-lock)
-   :dependent-lock (bt:make-lock)
-   :terminatedp nil
-   :dependent (make-hash-table :test 'eq :weakness :key-and-value)))
+  (:default-initargs))
 
 (defgeneric dead-class (object)
   (:method ((cell dependency-cell))
@@ -55,16 +55,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:method ((cell dependency-cell) dependency)
     (kill cell)))
 
+(defgeneric spread (cell event &rest all)
+  (:method :around ((cell dependency-cell) event &rest all)
+    (declare (ignore all))
+    (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
+      (bt:with-lock-held (terminated-lock)
+        (when terminatedp
+          (return-from spread cell))
+        (call-next-method)))
+    cell)
+  (:method ((cell dependency-cell) event &rest all)
+    (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
+      (bt:with-lock-held (dependent-lock)
+        (maphash-values (lambda (dep) (apply #'spread dep event all))
+                        dependent)))))
+
 (defgeneric kill (cell)
   (:method ((cell dependency-cell))
     (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
       (bt:with-lock-held (terminated-lock)
-        (when (shiftf terminatedp t)
-          (return-from kill cell)))
-      (bt:with-lock-held (dependent-lock)
-        (maphash-values (lambda (dep) (on-dependency-killed dep cell))
-                        dependent))
-      (bt:with-lock-held (terminated-lock)
+        (when terminatedp
+          (return-from kill cell))
+        (bt:with-lock-held (dependent-lock)
+          (maphash-values (lambda (dep) (on-dependency-killed dep cell))
+                          dependent))
+        (setf terminatedp t)
         (change-class cell (dead-class cell))))
     cell))
 

@@ -20,41 +20,41 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport)
+(cl:in-package #:pantalea.transport.protocol)
 
 
 ;; method locks main-nest-lock, this function is called from stop/start -nest methods to avoid deadlock Tue Jan  2 15:29:45 2024
 (defun schedule-to-event-loop-impl (nest promise &optional (delay 0))
-  (unless (started nest) (error 'p:nest-stopped))
+  (unless (started nest) (error 'nest-stopped))
   (if (zerop delay)
       (q:blocking-queue-push! (event-loop-queue nest)
                               promise)
       (tw:add! (timing-wheel nest) delay
                (lambda (&rest rest) (declare (ignore rest))
-                 (p:schedule-to-event-loop* nest promise))))
+                 (schedule-to-event-loop nest promise))))
   promise)
 
 (defun send-ping (connection)
-  (p:send-packet connection p:+type-ping+ +empty-packet+))
+  (send-packet connection +type-ping+ +empty-packet+))
 
 (defun send-pong (connection)
-  (p:send-packet connection p:+type-pong+ +empty-packet+))
+  (send-packet connection +type-pong+ +empty-packet+))
 
 (defun schedule-ping (nest connection)
   (labels ((timeout ()
              (log4cl:log-warn "No pong response, disconnecting connection!")
-             (p:disconnect* nest connection))
+             (disconnect nest connection))
            (pinging ()
              (if (send-ping connection)
                  (let ((promise (promise:promise (timeout))))
-                   (setf (p:ping-at connection) (local-time:now)
-                         (p:pong-timeout-promise connection) promise)
+                   (setf (ping-at connection) (local-time:now)
+                         (pong-timeout-promise connection) promise)
                    ;; will be canceled if pong arrives in time
-                   (p:schedule-to-event-loop* nest
+                   (schedule-to-event-loop nest
                                               promise
                                               +ping-delay+))
                  (log4cl:log-warn "Ping not sent!"))))
     (log4cl:log-debug "Scheduling ping!")
-    (p:schedule-to-event-loop* nest
+    (schedule-to-event-loop nest
                                #'pinging
                                +ping-delay+)))

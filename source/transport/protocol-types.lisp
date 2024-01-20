@@ -30,10 +30,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :own-routes (make-hash-table :test 'equalp)))
 
-(defclass fundamental-nest ()
-  ((%routing-table
-    :initarg :routing-table
-    :reader routing-table)
+(defclass message-table ()
+  ((%active-messages
+    :initarg :active-messages
+    :reader active-messages))
+  (:default-initargs
+   :active-messages (make-hash-table)))
+
+(defclass nest ()
+  ((%networking
+    :initarg :networking
+    :accessor networking)
+   (%timing-wheel
+    :initarg :timing-wheel
+    :accessor timing-wheel)
+   (%event-loop-queue
+    :initarg :event-loop-queue
+    :accessor event-loop-queue)
+   (%event-loop-thread
+    :initarg :event-loop-thread
+    :accessor event-loop-thread)
+   (%message-table
+    :initarg :message-table
+    :accessor message-table)
+   (%started
+    :initarg :started
+    :accessor started)
    (%main-nest-lock
     :initarg :main-nest-lock
     :reader main-nest-lock)
@@ -41,6 +63,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :long-term-identity-key
     :accessor long-term-identity-key))
   (:default-initargs
+   :message-table (make 'message-table)
+   :started nil
+   :timing-wheel nil
+   :event-loop-thread nil
+   :networking (make-hash-table)
+   :event-loop-queue (q:make-blocking-queue)
    :routing-table (make 'routing-table)
    :main-nest-lock (bt:make-lock "NEST lock")))
 
@@ -98,6 +126,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%pong-at
     :initarg :pong-at
     :accessor pong-at)
+   (%destination
+    :initarg :destination
+    :accessor destination)
    (%pong-timeout-promise
     :initarg :pong-timeout-promise
     :accessor pong-timeout-promise)
@@ -113,88 +144,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass dead-connection (fundamental-connection)
   ())
 
-(defclass fundamental-gossip ()
-  ((%day                                ; 32 bits
-    :initarg :day
-    :accessor day)
-   (%sec                                ; 32 bits
-    :initarg :sec
-    :accessor sec)
-   (%nsec                               ; 32 bits
-    :initarg :nsec
-    :accessor nsec)
-   (%id                                 ; 32 bits
+(defclass message (pantalea.utils.dependency:dependency-cell)
+  ((%hop-counter
+    :initarg :hop-counter
+    :accessor hop-counter)
+   (%id
     :initarg :id
-    :reader gossip-id
-    :accessor id)
-   (%payload
-    :initarg :payload
-    :reader gossip-payload
-    :accessor payload))
+    :reader id)
+   (%origin-public-key
+    :initarg :origin-public-key
+    :reader origin-public-key)
+   (%destination
+    :initarg :destination
+    :accessor destination)
+   (%lifetime
+    :initarg :lifetime
+    :accessor lifetime))
   (:default-initargs
-   :id (random most-positive-fixnum)
-   :forward-route '()
-   :backward-route '()))
+   :hop-counter 0
+   :lifetime #.(* 5 1000 60) ;; 5 minutes Fri Jan 19 21:03:36 2024
+   :id (random most-positive-fixnum)))
 
-(defclass route-discovery ()
-  ((%destination-public-key
-    :initarg :destination-public-key
-    :accessor destination-public-key
-    :reader route-discovery-destination-public-key)
-   (%forward-route
-    :initarg :forward-route
-    :reader route-discovery-forward-route
-    :accessor forward-route)
-   (%backward-route
-    :initarg :backward-route
-    :reader route-discovery-backward-route
-    :accessor backward-route)
-   (%palyoad
-    :initarg :palyoad
-    :reader route-discovery-payload
-    :accessor palyoad)))
+(defclass peer-discovery-request (message)
+  ())
+
+(defclass response ()
+  ((%id
+    :initarg :id
+    :reader id)
+   (%origin-public-key
+    :initarg :origin-public-key
+    :reader origin-public-key)))
+
+(defclass peer-discovery-response (response)
+  ((%destination
+    :initarg :destination
+    :reader destination)))
 
 (defclass fundamental-payload ()
   ())
-
-(defclass channels-group ()
-  ((%channels
-    :initarg :channels
-    :reader channels-group-channels)
-   (%nest
-    :initarg :nest
-    :reader channels-group-nest))
-  (:default-initargs
-   :channels (make-hash-table)))
-
-(defclass fundamental-channel ()
-  ((%group
-    :initarg :group
-    :reader channel-group)
-   (%port-number
-    :initarg :port-number
-    :reader channel-port-number)
-   (%nest
-    :initarg :nest
-    :reader channel-nest)
-   (%peer
-    :initarg :peer
-    :reader channel-peer)))
-
-(defclass enveloped-gossip (fundamental-gossip)
-  ((%destination-public-key
-    :initarg :destination-public-key
-    :reader enveloped-gossip-destination-public-key
-    :accessor destination-public-key))
-  (:default-initargs))
-
-(defclass opened-gossip (fundamental-gossip)
-  ()
-  (:default-initargs))
-
-(defclass fundamental-network-destination ()
-  ((%peer :initarg :peer
-          :reader network-destination-peer)))
 
 (define-condition nest-stopped (error)
   ())
@@ -204,3 +192,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (deftype packet ()
   `(simple-array (*) (unsigned-byte 8)))
+
+(defclass message-handler (pantalea.utils.dependency:dependency-cell)
+  ((%id
+    :reader id
+    :initarg :id)
+   (%origin-public-key
+    :reader origin-public-key
+    :initarg :origin-public-key)
+   (%nest
+    :reader read-nest
+    :initarg :nest)
+   (%connection
+    :reader connection
+    :initarg :connection)))

@@ -259,7 +259,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              #:nand
              #:econd
              #:ordering
-             #:nest
              #:nlet
              #:flip
              #:fork

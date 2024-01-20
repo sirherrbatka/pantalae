@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (alexandria:define-constant +tcp-timeout+ 5)
 
 (defun tcp-networking (nest)
-  (p:networking nest :tcp))
+  (p:networking-of-type nest :tcp))
 
 (defclass networking ()
   ((%socket-bundles
@@ -185,7 +185,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (for active-socket = (usocket:socket-accept socket))
              (for host = (usocket:get-peer-address active-socket))
              (log4cl:log-info "Incoming connection for ~a." host)
-             (for socket-bundle = (make 'socket-bundle :host host :socket active-socket))
+             (for socket-bundle = (make 'socket-bundle :host host :socket active-socket :destination (make 'ip-destination :host host)))
              (handler-case
                  (insert-socket-bundle nest socket-bundle (make 'ip-destination :host host))
                (error (e) (log4cl:log-error "~a" e)))))
@@ -219,7 +219,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                         :timeout +tcp-timeout+)))
     (error (e)
       (promise:fullfill! on-fail :value e :success nil)
-      (p:schedule-to-event-loop* nest (promise:promise (p:failed-to-connect nest destination e)))
+      (p:schedule-to-event-loop nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
   (bind ((local-client (p:make-double-ratchet-local-client nest))
          (socket (socket bundle))
@@ -245,7 +245,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (return (values type buffer)))))
     (unwind-protect
          (handler-case
-             (let ((keys-timeout (p:schedule-to-event-loop* (promise:promise (p:disconnect* nest bundle))
+             (let ((keys-timeout (p:schedule-to-event-loop (promise:promise (p:disconnect nest bundle))
                                                             30000)))
                (p:send-keys bundle local-client)
                (iterate
@@ -258,8 +258,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (promise:fullfill! on-success)
                (iterate
                  (for (values type buffer) = (read-socket))
-                 (p:schedule-to-event-loop* nest
-                                            (curry #'p:handle-incoming-packet*
+                 (p:schedule-to-event-loop nest
+                                            (curry #'p:handle-incoming-packet
                                                    nest
                                                    bundle
                                                    type
@@ -279,11 +279,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (log4cl:log-error "Socket thread has been stopped because ~a" e))
       (ignore-errors
        (if connected
-           (p:schedule-to-event-loop* nest
+           (p:schedule-to-event-loop nest
                                       (promise:promise
                                         (p:disconnected nest bundle e)
                                         (p:failed-to-connect nest bundle e)))
-           (p:schedule-to-event-loop* nest
+           (p:schedule-to-event-loop nest
                                       (promise:promise
                                         (p:failed-to-connect nest bundle e))))))))
 
@@ -293,7 +293,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
 
-(defmethod p:disconnected ((nest p:fundamental-nest) (connection socket-bundle) reason)
+(defmethod p:disconnected ((nest p:nest) (connection socket-bundle) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
   (bt:with-lock-held ((~> nest tcp-networking lock))
     (let* ((socket-bundles (~> nest tcp-networking socket-bundles))
@@ -307,15 +307,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (decf (fill-pointer socket-bundles))))
   nil)
 
-(defmethod p:connect* ((nest p:fundamental-nest) (destination ip-destination))
-  (insert-socket-bundle nest (make 'socket-bundle :host (host destination)) destination))
+(defmethod p:connect ((nest p:nest) (destination ip-destination))
+  (insert-socket-bundle nest
+                        (make 'socket-bundle :host (host destination) :destination destination)
+                        destination))
 
-(defmethod p:disconnect* ((nest p:fundamental-nest) (bundle socket-bundle))
+(defmethod p:disconnect ((nest p:nest) (bundle socket-bundle))
   (bt:with-lock-held ((lock bundle))
     (setf (terminating bundle) (promise:promise t)))
   nil)
 
-(defmethod p:stop-networking ((nest p:fundamental-nest) (networking networking))
+(defmethod p:stop-networking ((nest p:nest) (networking networking))
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
   (~> networking
@@ -337,7 +339,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (server-thread networking) nil
         (server-socket networking) nil))
 
-(defmethod p:start-networking ((nest p:fundamental-nest) (networking networking))
+(defmethod p:start-networking ((nest p:nest) (networking networking))
   (run-server-socket nest))
 
 (defmethod p:map-connections ((networking networking) function)

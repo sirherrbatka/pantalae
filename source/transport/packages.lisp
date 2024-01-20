@@ -23,67 +23,67 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:defpackage #:pantalea.transport.protocol
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames
+   (#:dr #:pantalea.cryptography)
+   (#:promise #:pantalea.utils.promise)
+   (#:q #:pantalea.utils.queue)
+   (#:tw #:pantalea.utils.timing-wheel)
    (#:dr #:pantalea.cryptography))
   (:export
-   #:gossip-timestamp
-   #:gossip-id
-   #:enveloped-gossip-destination-public-key
-   #:gossip-payload
-   #:for-me-p
-   #:handle-incoming-packet*
-   #:peers
-   #:gossip-seen-p
-   #:gossip-id
-   #:schedule-to-event-loop*
-   #:send-gossip
-   #:send-data
-   #:receive-data
-   #:handle-received-gossip
-   #:fundamental-nest
-   #:channel-peer
-   #:channel-port-number
-   #:channel-nest
-   #:opened-message<-enveloped-gossip
-   #:send-packet
-   #:send*
-   #:connect*
-   #:disconnected
-   #:connected
-   #:stop-nest*
-   #:fundamental-connection
-   #:failed-to-connect
-   #:nest-stopped
-   #:nest-started
-   #:with-main-lock-held
-   #:start-nest*
-   #:make-promise*
-   #:enveloped-message<-opened-gossip
-   #:fundamental-network-destination
-   #:network-destination-peer
-   #:schedule-to-event-loop/no-lock
-   #:ping-at
-   #:send-keys
-   #:long-term-identity-key
-   #:make-double-ratchet-local-client
-   #:double-ratchet
-   #:pong-at
-   #:set-double-ratchet
-   #:stop-networking
-   #:start-networking
-   #:networking
-   #:packet
-   #:pong-timeout-promise
-   #:disconnect*
-   #:long-term-identity-remote-key
-   #:map-connections
-   #:insert-direct-route
+   #:+type-data+
+   #:+type-echo+
    #:+type-gossip+
    #:+type-keys+
-   #:+type-echo+
+   #:+type-message+
    #:+type-ping+
    #:+type-pong+
+   #:+type-response+
    #:+type-route-discovery+
-   #:+type-data+))
+   #:connect
+   #:connected
+   #:decrypt
+   #:destination
+   #:destination
+   #:destination-key
+   #:destination-public-key
+   #:disconnect
+   #:disconnected
+   #:double-ratchet
+   #:encrypt
+   #:failed-to-connect
+   #:forget-message
+   #:fundamental-connection
+   #:fundamental-network-destination
+   #:handle-incoming-message
+   #:handle-incoming-packet
+   #:handle-incoming-response
+   #:hop-counter
+   #:long-term-identity-key
+   #:make-double-ratchet-local-client
+   #:nest
+   #:nest-started
+   #:nest-stopped
+   #:network-destination-peer
+   #:networking-of-type
+   #:origin-public-key
+   #:packet
+   #:peer-discovery-request
+   #:peer-discovery-response
+   #:per-discovery-response
+   #:ping-at
+   #:pong-at
+   #:schedule-to-event-loop
+   #:schedule-to-event-loop/no-lock
+   #:send-keys
+   #:send-message
+   #:send-response
+   #:set-double-ratchet
+   #:spread-message
+   #:start-nest
+   #:start-networking
+   #:stop-nest
+   #:stop-networking
+   #:with-main-lock-held
+   #:send-packet))
 
 (cl:defpackage #:pantalea.transport.intra
   (:use #:common-lisp #:pantalea.aux-package)
@@ -93,6 +93,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (#:q #:pantalea.utils.queue)
    (#:promise #:pantalea.utils.promise))
   (:export
+   #:*nest-map*
    #:destination
    #:networking))
 
@@ -105,17 +106,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:export
    #:ip-destination
    #:networking))
-
-(cl:defpackage #:pantalea.transport
-  (:use #:common-lisp #:pantalea.aux-package)
-  (:local-nicknames
-   (#:p #:pantalea.transport.protocol)
-   (#:dr #:pantalea.cryptography)
-   (#:tcp #:pantalea.transport.tcp)
-   (#:q #:pantalea.utils.queue)
-   (#:promise #:pantalea.utils.promise)
-   (#:tw #:pantalea.utils.timing-wheel)
-   (#:sk #:pantalea.utils.skip-list))
-  (:export
-   #:nest-implementation
-   #:connection))

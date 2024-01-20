@@ -53,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:deadp
    #:with-lock-held
    #:undepend
+   #:spread
    #:depend))
 
 (cl:defpackage #:pantalea.utils.timing-wheel
