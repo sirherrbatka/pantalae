@@ -121,7 +121,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (maphash-values (lambda (networking)
                     (stop-networking nest networking))
                   (networking nest))
-   ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
+  ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
   (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise
                                                                      (signal 'pantalea.utils.conditions:stop-thread)))))
   (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
@@ -170,18 +170,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (gethash type (networking nest)))
 
 (defmethod handle-incoming-packet ((nest nest)
-                                      connection
-                                      (type (eql +type-message+))
-                                      packet)
+                                   connection
+                                   (type (eql +type-message+))
+                                   packet)
   (bind ((message (~>> packet (decrypt connection) conspack:decode)))
     (handle-incoming-message nest connection message)))
 
 (defmethod spread-message ((nest nest) origin message source-public-key)
   (map-connections nest
-                     (lambda (connection &aux (key (destination-public-key connection)))
-                       (unless (equalp (ironclad:curve25519-key-y key)
-                                       (ironclad:curve25519-key-y source-public-key))
-                         (send-message nest connection message)))))
+                   (lambda (connection &aux (key (destination-public-key connection)))
+                     (unless (equalp (ironclad:curve25519-key-y key)
+                                     (ironclad:curve25519-key-y source-public-key))
+                       (send-message nest connection message)))))
 
 (defmethod message-active-p ((nest nest) message)
   (not (null (gethash (id message)
@@ -198,36 +198,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (unwind-protect
          (progn (call-next-method)
                 (schedule-to-event-loop nest
-                                           (let ((id (id message)))
-                                             (lambda () (forget-message nest id)))
-                                           #.(* 10 60 1000))) ; 10 minutes Fri Jan 19 22:05:46 2024
+                                        (let ((id (id message)))
+                                          (lambda () (forget-message nest id)))
+                                        #.(* 10 60 1000))) ; 10 minutes Fri Jan 19 22:05:46 2024
       (bind (((:accessors hop-counter) message))
         (when (<= (incf hop-counter) 8)
           (spread-message nest
-                             (destination-public-key connection)
-                             message
-                             (destination-key connection)))))))
+                          (destination-public-key connection)
+                          message
+                          (destination-key connection)))))))
 
 (defmethod handle-incoming-response ((nest nest)
-                                        connection
-                                        (handler message-handler)
-                                        response)
+                                     connection
+                                     (handler message-handler)
+                                     response)
   )
 
 (defmethod handle-incoming-message ((nest nest)
-                                       connection
-                                       (message peer-discovery-request))
+                                    connection
+                                    (message peer-discovery-request))
   (send-response nest connection message
-                    (make 'peer-discovery-response
-                          :origin-public-key (long-term-identity-key nest)
-                          :id (id message)
-                          :destination (destination message))))
+                 (make 'peer-discovery-response
+                       :origin-public-key (long-term-identity-key nest)
+                       :id (id message)
+                       :destination (destination message))))
 
 (defmethod send-response ((nest nest) connection message response)
   (send-packet connection
-                 +type-response+
-                 (ironclad:encrypt-in-place (origin-public-key message)
-                                            (conspack:encode response))))
+               +type-response+
+               (ironclad:encrypt-in-place (origin-public-key message)
+                                          (conspack:encode response))))
 
 (defmethod forget-message ((nest nest) id)
   (remhash id (~> nest message-table active-messages))
