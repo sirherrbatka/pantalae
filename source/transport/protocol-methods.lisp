@@ -187,7 +187,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (not (null (gethash (id message)
                       (~> nest message-table active-messages)))))
 
-(defmethod handle-incoming-message :around ((nest nest) connection message)
+(defmethod handle-incoming-message :around ((nest nest) connection (message message))
   (unless (message-active-p nest message)
     (let ((message-handler (make 'message-handler
                                  :id (id message)

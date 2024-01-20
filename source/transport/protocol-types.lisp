@@ -208,3 +208,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%connection
     :reader connection
     :initarg :connection)))
+
+(defclass peer-discovery-handler (message-handler)
+  ())
