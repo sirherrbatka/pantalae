@@ -69,6 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peer-discovery-request
    #:peer-discovery-response
    #:per-discovery-response
+   #:map-connections
    #:ping-at
    #:pong-at
    #:schedule-to-event-loop
