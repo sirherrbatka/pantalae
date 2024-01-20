@@ -217,16 +217,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod handle-incoming-message ((nest nest)
                                     connection
                                     (message peer-discovery-request))
-  (send-response nest connection message
-                 (make 'peer-discovery-response
-                       :origin-public-key (long-term-identity-key nest)
-                       :destination (destination message))))
+  (~>> (make-response message
+           (peer-discovery-payload
+            :origin-public-key (long-term-identity-key nest)
+            :destination (destination message)))
+       (send-response nest connection message)))
 
 (defmethod send-response ((nest nest) connection message response)
   (send-packet connection
                +type-response+
-               (ironclad:encrypt-in-place (origin-public-key message)
-                                          (conspack:encode response))))
+               (conspack:encode response)))
 
 (defmethod forget-message ((nest nest) id)
   (remhash id (~> nest message-table active-messages))

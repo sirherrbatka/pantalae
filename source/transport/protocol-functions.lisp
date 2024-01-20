@@ -73,3 +73,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (log4cl:log-info "Event loop has been stopped."))
     (error (e)
       (log4cl:log-error "Event loop has crashed with ~a" e))))
+
+(defmacro make-response (message (payload-class &rest keys))
+  (once-only (message)
+    `(~>> (make ',payload-class ,@keys) conspack:encode
+      (ironclad:encrypt-in-place (origin-public-key ,message))
+      (make 'response :id (id ,message) :encrypted-payload _))))
