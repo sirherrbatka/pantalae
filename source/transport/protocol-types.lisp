@@ -70,7 +70,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :networking (make-hash-table)
    :event-loop-queue (q:make-blocking-queue)
    :routing-table (make 'routing-table)
-   :main-nest-lock (bt:make-lock "NEST lock")))
+   :main-nest-lock (bt2:make-lock "NEST lock")))
 
 (defclass route-container (pantalea.utils.dependency:dependency-cell)
   ((%content

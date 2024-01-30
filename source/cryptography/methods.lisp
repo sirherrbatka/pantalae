@@ -145,7 +145,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     start
                     end
                     &optional (result (make-array (array-dimensions message) :element-type '(unsigned-byte 8))))
-  (bt:with-lock-held ((lock double-ratchet))
+  (bt2:with-lock-held ((lock double-ratchet))
     (let ((result (encrypt* (local-client double-ratchet)
                             (remote-client double-ratchet)
                             message
@@ -162,7 +162,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     start
                     end
                     &optional (result (make-array (array-dimensions cipher) :element-type '(unsigned-byte 8))))
-  (bt:with-lock-held ((lock double-ratchet))
+  (bt2:with-lock-held ((lock double-ratchet))
     (setf (public (keys (remote-client double-ratchet))) key)
     (rotate-ratchet (local-client double-ratchet) key)
     (decrypt* (local-client double-ratchet)

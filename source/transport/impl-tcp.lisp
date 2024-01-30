@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defmacro with-socket-bundle-locked ((socket-bundle) &body body)
-  `(bt:with-lock-held ((lock ,socket-bundle))
+  `(bt2:with-lock-held ((lock ,socket-bundle))
      ,@body))
 
 (alexandria:define-constant +tcp-port+ 5287)
@@ -53,9 +53,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt:make-lock "Sockets lock")
+   :lock (bt2:make-lock "Sockets lock")
    :server-socket nil
-   :server-lock (bt:make-lock "Server lock")
+   :server-lock (bt2:make-lock "Server lock")
    :terminating nil
    :server-thread nil
    :socket-bundles (vect)))
@@ -83,7 +83,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :lock
     :accessor lock))
   (:default-initargs
-   :lock (bt:make-lock "SOCKET-BUNDLE lock.")
+   :lock (bt2:make-lock "SOCKET-BUNDLE lock.")
    :host nil
    :socket nil
    :thread nil
@@ -121,7 +121,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun insert-socket-bundle (nest socket-bundle destination)
   (handler-case
-      (bt:with-lock-held ((~> nest tcp-networking lock))
+      (bt2:with-lock-held ((~> nest tcp-networking lock))
         (ensure (socket socket-bundle) (usocket:socket-connect (host socket-bundle)
                                                                +tcp-port+
                                                                :element-type '(unsigned-byte 8)
@@ -164,7 +164,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (error "Could not connect!")))
           result))
     (error (e)
-      (bt:with-lock-held ((~> nest tcp-networking lock))
+      (bt2:with-lock-held ((~> nest tcp-networking lock))
         (when-let ((socket (socket socket-bundle)))
           (usocket:socket-close socket)
           (setf (socket socket-bundle) nil)))
@@ -177,7 +177,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (iterate
              (with lock = (server-lock networking))
              (with socket = (server-socket networking))
-             (for terminating = (bt:with-lock-held (lock) (terminating networking)))
+             (for terminating = (bt2:with-lock-held (lock) (terminating networking)))
              (when terminating (leave))
              (for r-socket = (usocket:wait-for-input socket :timeout 1 :ready-only t))
              (when (null r-socket) (next-iteration))
@@ -189,7 +189,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              (handler-case
                  (insert-socket-bundle nest socket-bundle (make 'ip-destination :host host))
                (error (e) (log4cl:log-error "~a" e)))))
-    (bt:with-lock-held ((server-lock networking))
+    (bt2:with-lock-held ((server-lock networking))
       (when-let ((terminating (terminating networking)))
         (setf e :terminated)
         (usocket:socket-close (server-socket networking))
@@ -203,7 +203,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                    +tcp-port+
                                                    :reuse-address t
                                                    :element-type '(unsigned-byte 8))
-              server-thread (bt:make-thread (curry #'run-server-socket-impl nest)
+              server-thread (bt2:make-thread (curry #'run-server-socket-impl nest)
                                             :name "Nest server socket thread."))
       (error (e)
         (log4cl:log-error "Can't start server-socket ~a." e)
@@ -289,13 +289,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun run-socket-bundle (bundle nest on-succes on-fail destination)
   (setf (thread bundle)
-        (bt:make-thread
+        (bt2:make-thread
          (curry #'run-socket-bundle-impl bundle nest on-succes on-fail destination)
          :name "Socket Thread")))
 
 (defmethod p:disconnected ((nest p:nest) (connection socket-bundle) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (host connection) reason)
-  (bt:with-lock-held ((~> nest tcp-networking lock))
+  (bt2:with-lock-held ((~> nest tcp-networking lock))
     (let* ((socket-bundles (~> nest tcp-networking socket-bundles))
            (last-index (~> socket-bundles length 1-))
            (index (position connection socket-bundles :test #'eq)))
@@ -313,7 +313,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         destination))
 
 (defmethod p:disconnect ((nest p:nest) (bundle socket-bundle))
-  (bt:with-lock-held ((lock bundle))
+  (bt2:with-lock-held ((lock bundle))
     (setf (terminating bundle) (promise:promise t)))
   nil)
 
@@ -323,9 +323,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (~> networking
       socket-bundles
       (map 'list (lambda (bundle)
-                   (prog1 (bt:with-lock-held ((lock bundle))
+                   (prog1 (bt2:with-lock-held ((lock bundle))
                             (setf (terminating bundle) (promise:promise t)))
-                     (ignore-errors (~> bundle thread bt:join-thread))))
+                     (ignore-errors (~> bundle thread bt2:join-thread))))
            _)
       promise:combine
       (p:schedule-to-event-loop/no-lock nest _)
@@ -333,9 +333,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (~> networking socket-bundles fill-pointer) 0)
   ;; stop the server thread Tue Jan  2 15:18:50 2024
   (log4cl:log-info "Stopping server.")
-  (promise:force! (bt:with-lock-held ((server-lock networking))
+  (promise:force! (bt2:with-lock-held ((server-lock networking))
                     (setf (~> nest tcp-networking terminating) (promise:promise t))))
-  (~> nest tcp-networking server-thread bt:join-thread)
+  (~> nest tcp-networking server-thread bt2:join-thread)
   (setf (server-thread networking) nil
         (server-socket networking) nil))
 

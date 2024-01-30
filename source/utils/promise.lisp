@@ -29,11 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass single-promise (promise)
   ((%lock
     :initarg :lock
-    :initform (bt:make-lock "PROMISE lock")
+    :initform (bt2:make-lock "PROMISE lock")
     :accessor lock)
    (%cvar
     :initarg :cvar
-    :initform (bt:make-condition-variable)
+    :initform (bt2:make-condition-variable)
     :accessor cvar)
    (%callback
     :initarg :callback
@@ -64,18 +64,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod force! ((promise single-promise) &key timeout (loop t))
   (bind (((:accessors lock cvar result fullfilled) promise))
-    (bt:with-lock-held (lock)
+    (bt2:with-lock-held (lock)
       (if loop
           (iterate
             (until fullfilled)
-            (bt:condition-wait cvar lock :timeout timeout)
+            (bt2:condition-wait cvar lock :timeout timeout)
             (finally
              (if (typep result 'condition)
                  (signal result)
                  (return-from force! (values result fullfilled)))))
           (progn
             (unless (fullfilled promise)
-              (bt:condition-wait cvar lock :timeout timeout))
+              (bt2:condition-wait cvar lock :timeout timeout))
             (if (typep result 'condition)
                  (signal result)
                  (return-from force! (values result fullfilled))))))))
@@ -83,7 +83,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod force! ((promise eager-promise) &key timeout (loop t))
   (declare (ignore timeout loop))
   (bind (((:accessors callback lock successp cvar result fullfilled) promise))
-    (bt:with-lock-held (lock)
+    (bt2:with-lock-held (lock)
       (unless fullfilled
         (handler-case
             (setf fullfilled t
@@ -106,7 +106,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     t))
 
 (defmethod fullfilledp ((promise single-promise))
-  (bt:with-lock-held ((lock promise))
+  (bt2:with-lock-held ((lock promise))
     (fullfilled promise)))
 
 (defmethod fullfilledp ((promise combined-promise))
@@ -117,7 +117,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod fullfill! ((promise single-promise) &key (value nil value-bound-p) (success t success-bound-p))
   (bind (((:accessors lock cvar callback result fullfilled successp) promise))
     (unwind-protect
-         (bt:with-lock-held (lock)
+         (bt2:with-lock-held (lock)
            (unless fullfilled
              (handler-case
                  (setf fullfilled t
@@ -130,7 +130,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  (setf result s)
                  (signal s))))
            result)
-      (bt:condition-notify cvar))))
+      (bt2:condition-notify cvar))))
 
 (defmethod fullfill! ((promise combined-promise) &key (value nil value-bound-p) (success t success-bound-p))
   (if value-bound-p
@@ -157,7 +157,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod cancel! ((promise single-promise))
   (bind (((:accessors lock cvar result fullfilled) promise))
-    (bt:with-lock-held (lock)
+    (bt2:with-lock-held (lock)
       (unless fullfilled
         (setf result nil
               fullfilled t)))))

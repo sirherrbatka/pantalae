@@ -24,5 +24,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defmacro with-main-lock-held ((nest) &body body)
-  `(bt:with-lock-held ((main-nest-lock ,nest))
+  `(bt2:with-lock-held ((main-nest-lock ,nest))
      ,@body))

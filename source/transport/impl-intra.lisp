@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt:make-lock "Connections lock")
+   :lock (bt2:make-lock "Connections lock")
    :connections (vect)))
 
 (defun intra-networking (nest)
@@ -74,7 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:disconnected ((nest p:nest) (connection connection) reason)
   (log4cl:log-info "Connection to ~a lost because ~a." (other-nest connection) reason)
-  (bt:with-lock-held ((~> nest intra-networking lock))
+  (bt2:with-lock-held ((~> nest intra-networking lock))
     (let* ((connections (~> nest intra-networking connections))
            (last-index (~> connections length 1-))
            (index (iterate
@@ -121,7 +121,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun run-connection (connection nest promise)
   (setf (thread connection)
-        (bt:make-thread
+        (bt2:make-thread
          (lambda (&aux (end nil))
            (unwind-protect
                 (handler-case
@@ -163,7 +163,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (promise:fullfill! end)))))))
 
 (defun make-connection (destination-nest origin-nest)
-  (bt:with-lock-held ((~> destination-nest intra-networking lock))
+  (bt2:with-lock-held ((~> destination-nest intra-networking lock))
     (let ((queue-a (q:make-blocking-queue))
           (queue-b (q:make-blocking-queue)))
       (vector-push-extend (make 'connection
@@ -184,7 +184,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             :outgoing-queue queue-a))))
 
 (defmethod p:connect ((nest p:nest) (destination destination))
-  (bt:with-lock-held ((~> nest intra-networking lock))
+  (bt2:with-lock-held ((~> nest intra-networking lock))
     (if-let ((existing
               (iterate
                 (for connection in-vector (~> nest intra-networking connections))

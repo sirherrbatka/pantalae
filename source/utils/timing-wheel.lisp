@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :buckets
     :accessor buckets)
    (%lock
-    :initform (bt:make-lock "TIMING-WHEEL lock")
+    :initform (bt2:make-lock "TIMING-WHEEL lock")
     :accessor lock)
    (%wheel-pointer
     :initform 0
@@ -75,11 +75,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (progn
             (decf (task-remaining-rounds task))
             (push task pending-tasks))))
-    (bt:with-lock-held ((q:lock bucket))
+    (bt2:with-lock-held ((q:lock bucket))
       (iterate
         (for task in pending-tasks)
         (q:queue-push/no-lock! bucket task)))
-    (bt:with-lock-held ((lock timing-wheel))
+    (bt2:with-lock-held ((lock timing-wheel))
       (setf (wheel-pointer timing-wheel)
             (mod (1+ wheel-pointer) (length buckets))))))
 
@@ -87,7 +87,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (lret ((timing-wheel (make-timing-wheel size tick-duration)))
     (let ((sleep-duration (/ tick-duration 1000.0)))
       (setf (thread timing-wheel)
-            (bt:make-thread (lambda ()
+            (bt2:make-thread (lambda ()
                               (log4cl:log-info "TMING-WHEEL thread starting.")
                               (handler-case
                                   (iterate
@@ -103,7 +103,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (ticks (round (+ delay tick-duration) tick-duration))
          (buckets (buckets timing-wheel))
          (size (length buckets))
-         (pointer (mod (+ (bt:with-lock-held ((lock timing-wheel))
+         (pointer (mod (+ (bt2:with-lock-held ((lock timing-wheel))
                             (wheel-pointer timing-wheel))
                           ticks)
                        size)))
@@ -114,4 +114,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     callback))
 
 (defun join-thread! (timing-wheel)
-  (bt:join-thread (thread timing-wheel)))
+  (bt2:join-thread (thread timing-wheel)))

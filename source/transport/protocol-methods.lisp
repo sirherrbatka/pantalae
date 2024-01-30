@@ -24,19 +24,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defmethod start-nest :around ((nest nest))
-  (bt:with-lock-held ((main-nest-lock nest))
+  (bt2:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
 
 (defmethod stop-nest :around ((nest nest))
-  (bt:with-lock-held ((main-nest-lock nest))
+  (bt2:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
 
 (defmethod connect :around ((nest nest) destination)
-  (bt:with-lock-held ((main-nest-lock nest))
+  (bt2:with-lock-held ((main-nest-lock nest))
     (call-next-method)))
 
 (defmethod schedule-to-event-loop ((nest nest) promise &optional (delay 0))
-  (bt:with-lock-held ((main-nest-lock nest))
+  (bt2:with-lock-held ((main-nest-lock nest))
     (schedule-to-event-loop/no-lock nest promise delay)))
 
 (defmethod disconnected :after ((nest nest) (connection fundamental-connection) reason)
@@ -107,7 +107,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (maphash-values (lambda (networking)
                     (start-networking nest networking))
                   (networking nest))
-  (setf (event-loop-thread nest) (bt:make-thread (curry #'run-event-loop nest)
+  (setf (event-loop-thread nest) (bt2:make-thread (curry #'run-event-loop nest)
                                                  :name "Nest Event Loop Thread")
         (timing-wheel nest) (tw:run +timing-wheel-size+ +timing-wheel-tick-duration+)
         (started nest) t)
@@ -127,7 +127,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
                                           +timing-wheel-tick-duration+
                                           (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))))
-  (ignore-errors (bt:join-thread (event-loop-thread nest)))
+  (ignore-errors (bt2:join-thread (event-loop-thread nest)))
   (tw:join-thread! (timing-wheel nest))
   ;; everything should be stopped now, resetting state Tue Jan  2 15:24:41 2024
   (setf (started nest) nil)

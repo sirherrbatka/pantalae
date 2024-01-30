@@ -127,4 +127,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :remote-client
     :accessor remote-client))
   (:default-initargs
-   :lock (bt:make-lock)))
+   :lock (bt2:make-lock)))

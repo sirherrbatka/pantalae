@@ -26,11 +26,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass dependency-cell ()
   ((%terminated-lock
     :initarg :terminated-lock
-    :initform (bt:make-lock)
+    :initform (bt2:make-lock)
     :accessor terminated-lock)
    (%dependent-lock
     :initarg :dependent-lock
-    :initform (bt:make-lock)
+    :initform (bt2:make-lock)
     :accessor dependent-lock)
    (%dependent
     :initarg :dependent
@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun deadp (cell)
   (bind (((:accessors terminated-lock terminatedp) cell))
-    (bt:with-lock-held (terminated-lock)
+    (bt2:with-lock-held (terminated-lock)
       terminatedp)))
 
 (defgeneric on-dependency-killed (cell dependency)
@@ -59,24 +59,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:method :around ((cell dependency-cell) event &rest all)
     (declare (ignore all))
     (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
-      (bt:with-lock-held (terminated-lock)
+      (bt2:with-lock-held (terminated-lock)
         (when terminatedp
           (return-from spread cell))
         (call-next-method)))
     cell)
   (:method ((cell dependency-cell) event &rest all)
     (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
-      (bt:with-lock-held (dependent-lock)
+      (bt2:with-lock-held (dependent-lock)
         (maphash-values (lambda (dep) (apply #'spread dep event all))
                         dependent)))))
 
 (defgeneric kill (cell)
   (:method ((cell dependency-cell))
     (bind (((:accessors dependent-lock terminated-lock terminatedp dependent) cell))
-      (bt:with-lock-held (terminated-lock)
+      (bt2:with-lock-held (terminated-lock)
         (when terminatedp
           (return-from kill cell))
-        (bt:with-lock-held (dependent-lock)
+        (bt2:with-lock-held (dependent-lock)
           (maphash-values (lambda (dep) (on-dependency-killed dep cell))
                           dependent))
         (setf terminatedp t)
@@ -86,19 +86,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric depend (dependent dependency)
   (:method ((a dependency-cell) (b dependency-cell))
     (bind (((:accessors terminated-lock dependent-lock dependent) b))
-      (bt:with-lock-held (terminated-lock)
-        (bt:with-lock-held (dependent-lock)
+      (bt2:with-lock-held (terminated-lock)
+        (bt2:with-lock-held (dependent-lock)
           (setf (gethash a dependent) a)))
       nil)))
 
 (defgeneric undepend (dependent dependency)
   (:method ((a dependency-cell) (b dependency-cell))
     (bind (((:accessors terminated-lock dependent-lock dependent) b))
-      (bt:with-lock-held (terminated-lock)
-        (bt:with-lock-held (dependent-lock)
+      (bt2:with-lock-held (terminated-lock)
+        (bt2:with-lock-held (dependent-lock)
           (remhash a dependent)))
       nil)))
 
 (defmacro with-lock-held ((cell) &body body)
-  `(bt:with-lock-held ((terminated-lock ,cell))
+  `(bt2:with-lock-held ((terminated-lock ,cell))
      ,@body))

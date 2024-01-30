@@ -42,7 +42,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:connected
    #:decrypt
    #:destination
-   #:destination
    #:destination-key
    #:destination-public-key
    #:disconnect
@@ -59,6 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:hop-counter
    #:long-term-identity-key
    #:make-double-ratchet-local-client
+   #:map-connections
    #:nest
    #:nest-started
    #:nest-stopped
@@ -69,13 +69,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peer-discovery-request
    #:peer-discovery-response
    #:per-discovery-response
-   #:map-connections
    #:ping-at
    #:pong-at
    #:schedule-to-event-loop
    #:schedule-to-event-loop/no-lock
    #:send-keys
    #:send-message
+   #:send-packet
    #:send-response
    #:set-double-ratchet
    #:spread-message
@@ -83,8 +83,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:start-networking
    #:stop-nest
    #:stop-networking
-   #:with-main-lock-held
-   #:send-packet))
+   #:with-main-lock-held))
 
 (cl:defpackage #:pantalea.transport.intra
   (:use #:common-lisp #:pantalea.aux-package)

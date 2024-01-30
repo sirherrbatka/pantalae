@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor head)
    (%lock
     :initarg :lock
-    :initform (bt:make-lock "QUEUE lock")
+    :initform (bt2:make-lock "QUEUE lock")
     :accessor lock)
    (%tail
     :initarg :tail
@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass blocking-queue (queue)
   ((%cvar
     :initarg :cvar
-    :initform (bt:make-condition-variable :name "BLOCKING-QUEUE condition variable")
+    :initform (bt2:make-condition-variable :name "BLOCKING-QUEUE condition variable")
     :accessor cvar)))
 
 (defun make-queue ()
@@ -64,7 +64,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   nil)
 
 (defun queue-push! (queue value)
-  (bt:with-lock-held ((lock queue))
+  (bt2:with-lock-held ((lock queue))
     (queue-push/no-lock! queue value))
   nil)
 
@@ -79,17 +79,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (values nil nil))))
 
 (defun queue-pop! (queue)
-  (bt:with-lock-held ((lock queue))
+  (bt2:with-lock-held ((lock queue))
     (queue-pop/no-lock! queue)))
 
 (defun blocking-queue-pop! (queue)
-  (bt:with-lock-held ((lock queue))
+  (bt2:with-lock-held ((lock queue))
     (iterate
       (for (values value found) = (queue-pop/no-lock! queue))
       (when found (return-from blocking-queue-pop! value))
-      (bt:condition-wait (cvar queue) (lock queue)))))
+      (bt2:condition-wait (cvar queue) (lock queue)))))
 
 (defun blocking-queue-push! (queue value)
-  (bt:with-lock-held ((lock queue))
+  (bt2:with-lock-held ((lock queue))
     (queue-push/no-lock! queue value)
-    (bt:condition-notify (cvar queue))))
+    (bt2:condition-notify (cvar queue))))
