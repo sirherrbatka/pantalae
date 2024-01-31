@@ -176,6 +176,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bind ((message (~>> packet (decrypt connection) conspack:decode)))
     (handle-incoming-message nest connection message)))
 
+(defmethod handle-incoming-packet ((nest nest)
+                                   connection
+                                   (type (eql +type-response+))
+                                   packet)
+  (bind ((response (conspack:decode packet))
+         (message-handler (gethash (id response) (~> nest message-table active-messages))))
+    (unless (null message-handler)
+      (handle-incoming-response nest
+                                (connection message-handler)
+                                handler
+                                response)))
+  ;; that one is a little bit hairy Wed Jan 31 15:16:22 2024
+  )
+
 (defmethod spread-message ((nest nest) origin message source-public-key)
   (map-connections nest
                    (lambda (connection &aux (key (destination-public-key connection)))
@@ -212,7 +226,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                      connection
                                      (handler message-handler)
                                      response)
-  )
+  ;; should forward message to the origin Wed Jan 31 14:52:29 2024
+  nil)
+
+(defmethod handle-incoming-response ((nest nest)
+                                     connection
+                                     (handler peer-discovery-handler)
+                                     response)
+  ;; connect, maybe? Wed Jan 31 15:01:00 2024
+  nil)
 
 (defmethod handle-incoming-message ((nest nest)
                                     connection
