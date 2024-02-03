@@ -29,8 +29,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:make-remote-client
    #:client-public-keys
    #:encrypt
+   #:make-25519-keys
+   #:remote-client
    #:make-double-ratchet
    #:decrypt
    #:long-term-identity-remote-key
+   #:long-term-identity-key
+   #:private
+   #:public
    #:keys-load
    #:keys-save))

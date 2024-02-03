@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor head)
    (%lock
     :initarg :lock
-    :initform (bt2:make-lock "QUEUE lock")
+    :initform (bt2:make-lock :name "QUEUE lock")
     :accessor lock)
    (%tail
     :initarg :tail

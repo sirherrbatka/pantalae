@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (private (ic:make-private-key :curve25519 :x x))
          (y (ic:curve25519-key-y private))
          (public (ic:make-public-key :curve25519 :y y)))
-    (make-instance 'keys-pair :public public :private private)))
+    (make 'keys-pair :public public :private private)))
 
 (defun chain-key-length (chain)
   (array-dimension (key chain) 0))

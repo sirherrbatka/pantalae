@@ -34,3 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (conspack:defencoding message
   %hop-counter %origin-public-key %id %destination)
+
+(conspack:defencoding fundamental-network-destination
+  )

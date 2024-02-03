@@ -66,8 +66,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                       (make 'route-container
                             :routing-table routing-table
                             :content nil)))
-         (new-route (make 'direct-route :connection connection
-                                        :destination-public-key key)))
+         (new-route (make 'direct-route
+                          :connection connection
+                          :destination-public-key key)))
     (pantalea.utils.dependency:depend new-route connection)
     (pantalea.utils.dependency:depend container new-route)
     (when-let ((old-route (content container)))
@@ -173,22 +174,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    connection
                                    (type (eql +type-message+))
                                    packet)
-  (bind ((message (~>> packet (decrypt connection) conspack:decode)))
+  (log4cl:log-debug "Got message packet!")
+  (bind ((message (~>> packet  conspack:decode)))
     (handle-incoming-message nest connection message)))
 
 (defmethod handle-incoming-packet ((nest nest)
                                    connection
                                    (type (eql +type-response+))
                                    packet)
+  (log4cl:log-debug "Got response packet!")
   (bind ((response (conspack:decode packet))
-         (message-handler (gethash (id response) (~> nest message-table active-messages))))
-    (unless (null message-handler)
-      (handle-incoming-response nest
-                                (connection message-handler)
-                                handler
-                                response)))
-  ;; that one is a little bit hairy Wed Jan 31 15:16:22 2024
-  )
+         (handler (gethash (id response) (~> nest message-table active-messages))))
+    (unless (null handler)
+      (handle-incoming-response nest handler response packet connection))))
 
 (defmethod spread-message ((nest nest) origin message source-public-key)
   (map-connections nest
@@ -223,27 +221,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           (destination-key connection)))))))
 
 (defmethod handle-incoming-response ((nest nest)
-                                     connection
                                      (handler message-handler)
-                                     response)
+                                     response
+                                     packet
+                                     connection)
   ;; should forward message to the origin Wed Jan 31 14:52:29 2024
-  nil)
+  (send-packet (connection handler) +type-response+ packet))
 
 (defmethod handle-incoming-response ((nest nest)
-                                     connection
                                      (handler peer-discovery-handler)
-                                     response)
+                                     response
+                                     packet
+                                     connection)
   ;; connect, maybe? Wed Jan 31 15:01:00 2024
-  nil)
+  (log4cl:log-debug "Got peer discovery response!")
+  (let ((payload (~> nest
+                     long-term-identity-key
+                     pantalea.cryptography:private
+                     ironclad:curve25519-key-y
+                     (ironclad:make-cipher :aes :mode :ecb :key _)
+                     (decrypt-in-place (encrypted-payload response))
+                     conspack:decode)))))
 
 (defmethod handle-incoming-message ((nest nest)
                                     connection
                                     (message peer-discovery-request))
-  (~>> (make-response message
-           (peer-discovery-payload
-            :origin-public-key (long-term-identity-key nest)
-            :destination (destination message)))
-       (send-response nest connection message)))
+  (log4cl:log-debug "Got peer discovery request!")
+  (send-response nest connection message
+                 (make-response message
+                     'peer-discovery-payload
+                     :origin-public-key (long-term-identity-key nest)
+                     :destination (destination message))))
 
 (defmethod send-response ((nest nest) connection message response)
   (send-packet connection
@@ -267,4 +275,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (destination message) (destination connection))
   (send-packet connection
                +type-message+
-               (encrypt connection (conspack:encode message))))
+               (conspack:encode message)))
+
+(defmethod discover-peers ((nest nest))
+  (let* ((public-key (~> nest long-term-identity-key pantalea.cryptography:public))
+         (message (make 'peer-discovery-request :origin-public-key public-key))
+         (id (id message))
+         (message-handler (make 'peer-discovery-handler :id id :nest nest)))
+    (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
+    (schedule-to-event-loop nest
+                            (curry #'forget-message nest id)
+                            #.(* 10 60 1000))
+    (spread-message nest public-key message public-key)))

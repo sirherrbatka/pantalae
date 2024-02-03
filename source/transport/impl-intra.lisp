@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt2:make-lock "Connections lock")
+   :lock (bt2:make-lock :name "Connections lock")
    :connections (vect)))
 
 (defun intra-networking (nest)
@@ -45,6 +45,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%other-nest-key
     :initarg :other-nest-key
     :accessor other-nest-key)))
+
+(conspack:defencoding destination
+  %other-nest-key)
 
 (defmethod other-nest ((destination destination))
   (gethash (other-nest-key destination) *nest-map*))
@@ -134,15 +137,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                     (return-from read-connection (values (car elt) (cdr elt)))
                                     (progn
                                       (setf end elt)
-                                      (error "Ending thread!")))))
-                           (log4cl:log-info "Starting connection thread."))
+                                      (error "Ending thread!"))))))
+                      (log4cl:log-info "Starting connection thread.")
                       (q:blocking-queue-push! outgoing-queue (find-destination-key nest))
                       (p:send-keys connection local-client)
                       (setf (p:destination connection) (q:blocking-queue-pop! incoming-queue))
                       (iterate
                         (for (values type packet) = (read-connection))
                         (when (= type p:+type-keys+)
-                          (p:set-double-ratchet connection local-client (conspack:decode packet))
+                          (log4cl:log-debug "Got keys, decoding…")
+                          (let ((keys (conspack:decode packet)))
+                            (p:set-double-ratchet connection local-client keys))
                           (leave)))
                       (when promise
                         (p:schedule-to-event-loop nest promise))
@@ -155,7 +160,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                           type
                                                           packet))))
                   (error (e)
-                    (log:info e)))
+                    (log:info "~a" e)))
              (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
              (handler-case (p:schedule-to-event-loop nest (curry #'p:disconnected nest connection nil))
                (p:nest-stopped (e) (declare (ignore e)) nil))

@@ -23,6 +23,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
+(defclass fundamental-network-destination ()
+  ())
+
 (defclass routing-table ()
   ((%own-routes
     :initarg :own-routes
@@ -59,6 +62,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%main-nest-lock
     :initarg :main-nest-lock
     :reader main-nest-lock)
+   (%routing-table
+    :initarg :routing-table
+    :accessor routing-table)
    (%long-term-identity-key
     :initarg :long-term-identity-key
     :accessor long-term-identity-key))
@@ -70,7 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :networking (make-hash-table)
    :event-loop-queue (q:make-blocking-queue)
    :routing-table (make 'routing-table)
-   :main-nest-lock (bt2:make-lock "NEST lock")))
+   :main-nest-lock (bt2:make-lock :name "NEST lock")))
 
 (defclass route-container (pantalea.utils.dependency:dependency-cell)
   ((%content
@@ -159,7 +165,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor destination))
   (:default-initargs
    :hop-counter 0
-   :lifetime #.(* 5 1000 60) ;; 5 minutes Fri Jan 19 21:03:36 2024
+   :destination nil
    :id (random most-positive-fixnum)))
 
 (defclass peer-discovery-request (message)

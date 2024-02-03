@@ -61,21 +61,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     result)))
 
 (defun run-event-loop (nest)
-  (handler-case
-      (iterate
-        (with queue = (event-loop-queue nest))
-        (for callback = (q:blocking-queue-pop! queue))
+  (iterate
+    (with queue = (event-loop-queue nest))
+    (for callback = (q:blocking-queue-pop! queue))
+    (handler-case
         (if (typep callback 'promise:promise)
             (promise:fullfill! callback)
-            (funcall callback)))
-    (pantalea.utils.conditions:stop-thread (e)
-      (declare (ignore e))
-      (log4cl:log-info "Event loop has been stopped."))
-    (error (e)
-      (log4cl:log-error "Event loop has crashed with ~a" e))))
+            (funcall callback))
+      (pantalea.utils.conditions:stop-thread (e)
+        (declare (ignore e))
+        (log4cl:log-info "Event loop has been stopped.")
+        (return-from run-event-loop nil))
+      (error (e)
+        (log4cl:log-error "Error on the nest event loop thread ~a" e)))))
 
-(defmacro make-response (message (payload-class &rest keys))
-  (once-only (message)
-    `(~>> (make ',payload-class ,@keys) conspack:encode
-      (ironclad:encrypt-in-place (origin-public-key ,message))
-      (make 'response :id (id ,message) :encrypted-payload _))))
+(defun destination-public-key (connection)
+  (~> connection
+      double-ratchet
+      pantalea.cryptography:remote-client
+      pantalea.cryptography:long-term-identity-key
+      pantalea.cryptography:public))

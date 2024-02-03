@@ -53,9 +53,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock))
   (:default-initargs
-   :lock (bt2:make-lock "Sockets lock")
+   :lock (bt2:make-lock :name "Sockets lock")
    :server-socket nil
-   :server-lock (bt2:make-lock "Server lock")
+   :server-lock (bt2:make-lock :name "Server lock")
    :terminating nil
    :server-thread nil
    :socket-bundles (vect)))
@@ -83,7 +83,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :lock
     :accessor lock))
   (:default-initargs
-   :lock (bt2:make-lock "SOCKET-BUNDLE lock.")
+   :lock (bt2:make-lock :name "SOCKET-BUNDLE lock.")
    :host nil
    :socket nil
    :thread nil
@@ -251,7 +251,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (iterate
                  (for (values type buffer) = (read-socket))
                  (when (= type p:+type-keys+)
-                   (p:set-double-ratchet bundle local-client (conspack:decode buffer))
+                   (let ((keys (conspack:decode buffer)))
+                     (p:set-double-ratchet bundle local-client keys))
                    (leave)))
                (promise:cancel! keys-timeout)
                (setf connected t)
@@ -265,7 +266,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                    type
                                                    buffer))))
            (error (er)
-             (log:info er)
+             (log4cl:log-info "~a" er)
              (setf e er)))
       (with-socket-bundle-locked (bundle)
         (when-let ((socket (socket bundle)))
@@ -275,8 +276,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (when-let ((terminating (terminating bundle)))
           (setf e :terminated)
           (promise:fullfill! terminating)))
-      (unless (member e '(nil :terminated))
-        (log4cl:log-error "Socket thread has been stopped because ~a" e))
+      (log4cl:log-error "Socket thread has been stopped because.")
       (ignore-errors
        (if connected
            (p:schedule-to-event-loop nest

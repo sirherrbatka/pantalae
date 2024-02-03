@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod print-object ((object client) stream)
   (print-unreadable-object (object stream)
-    (format stream "ID: ~a EPH: ~a" (long-term-identity-key object) (ephemeral-key object))))
+    (format stream "ID: ~a" (long-term-identity-key object))))
 
 (defmethod forward ((chain chain) bytes &optional (length 32))
   (let* ((chain-key-length (chain-key-length chain))

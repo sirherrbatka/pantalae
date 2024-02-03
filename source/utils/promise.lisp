@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass single-promise (promise)
   ((%lock
     :initarg :lock
-    :initform (bt2:make-lock "PROMISE lock")
+    :initform (bt2:make-lock :name "PROMISE lock")
     :accessor lock)
    (%cvar
     :initarg :cvar

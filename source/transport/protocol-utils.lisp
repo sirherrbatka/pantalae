@@ -58,3 +58,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (schedule-to-event-loop nest
                                #'pinging
                                +ping-delay+)))
+
+(defun encrypt-in-place (cipher buffer)
+  (ironclad:encrypt-in-place cipher buffer)
+  buffer)
+
+(defun decrypt-in-place (cipher buffer)
+  (ironclad:decrypt-in-place cipher buffer)
+  buffer)
+
+(defun make-response (message payload-class &rest keys)
+  (~> message
+      origin-public-key
+      ironclad:curve25519-key-y
+      (ironclad:make-cipher :aes :mode :ecb :key _)
+      (encrypt-in-place (conspack:encode (apply #'make-instance payload-class keys)))
+      (make 'response :id (id message) :encrypted-payload _)))

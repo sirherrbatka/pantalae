@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :buckets
     :accessor buckets)
    (%lock
-    :initform (bt2:make-lock "TIMING-WHEEL lock")
+    :initform (bt2:make-lock :name "TIMING-WHEEL lock")
     :accessor lock)
    (%wheel-pointer
     :initform 0
