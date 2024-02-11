@@ -48,17 +48,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 key
                 0
                 (length data)
-                data)
-    data))
+                data)))
 
 (defun encrypt (connection packet &optional (result packet))
-  (conspack:encode
-   (pantalea.cryptography:encrypt
-    (double-ratchet connection)
-    packet
-    0
-    (length packet)
-    result)))
+  (~> connection
+      double-ratchet
+      (pantalea.cryptography:encrypt packet
+                                     0
+                                     (length packet)
+                                     result)
+      conspack:encode))
 
 (defun run-event-loop (nest)
   (iterate
@@ -74,10 +73,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (return-from run-event-loop nil))
       (error (e)
         (log4cl:log-error "Error on the nest event loop thread ~a" e)))))
-
-(defun destination-public-key (connection)
-  (~> connection
-      double-ratchet
-      pantalea.cryptography:remote-client
-      pantalea.cryptography:long-term-identity-key
-      pantalea.cryptography:public))

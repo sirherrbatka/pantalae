@@ -45,37 +45,53 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (conspack:defencoding keys-pair
   %private)
 
-(defclass chain ()
-  ((%kdf :initarg :kdf
-         :reader kdf)
-   (%key :initarg :key
-         :accessor key)
-   (%steps :initarg :steps
-           :reader steps
-           :writer write-steps)
-   (%iteration-ocunt :initarg :iteration-count
-                     :reader iteration-count))
+(defclass ratchet ()
+  ((%root-key
+    :initarg :root-key
+    :accessor root-key
+    :accessor rk)
+   (%send-keys
+    :initform nil
+    :initarg :send-keys
+    :accessor send-keys)
+   (%receive-key
+    :initarg :receive-key
+    :initform nil
+    :accessor receive-key)
+   (%chain-key-receive
+    :initarg :chain-key-receive
+    :initform nil
+    :accessor ckr
+    :accessor chain-key-receive)
+   (%chain-key-send
+    :initarg :chain-key-send
+    :initform nil
+    :accessor cks
+    :accessor chain-key-send)
+   (%number-of-sent-messages
+    :initarg :number-of-sent-messages
+    :initform nil
+    :accessor number-of-sent-messages)
+   (%number-of-received-messages
+    :accessor number-of-received-messages
+    :initarg :number-of-received-messages)
+   (%number-of-messages-in-previous-sending-chain
+    :accessor number-of-messages-in-previous-sending-chain
+    :initarg :number-of-messages-in-previous-sending-chain
+    :initform 0)
+   (%kdf
+    :initarg :kdf
+    :reader kdf)
+   (%constant
+    :initarg :constant
+    :reader constant))
   (:default-initargs
-   :steps 0
-   :iteration-count 4
-   :kdf (ic:make-kdf :hmac-kdf :digest :tree-hash)
-   :key (ic:make-random-salt)))
-
-(defclass symmetric-ratchet ()
-  ((%chain :initarg :chain
-           :reader chain)
-   (%constant :initarg :constant
-              :reader constant))
-  (:default-initargs
-   :constant (ic:make-random-salt 0)))
-
-(defclass diffie-hellman-ratchet ()
-  ((%root-ratchet :initarg :root-ratchet
-                  :accessor root-ratchet)
-   (%receiving-ratchet :initarg :receiving-ratchet
-                       :accessor receiving-ratchet)
-   (%sending-ratchet :initarg :sending-ratchet
-                     :accessor sending-ratchet)))
+   :number-of-sent-messages 0
+   :number-of-received-messages 0
+   :send-keys (make-25519-keys)
+   :root-key nil
+   :constant (ic:make-random-salt 0)
+   :kdf (ic:make-kdf :hmac-kdf :digest :sha256)))
 
 (defclass client ()
   ((%long-term-identity-key :initarg :long-term-identity-key
@@ -92,10 +108,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 :reader shared-key)
    (%keys :initarg :keys
           :accessor keys)
-   (%diffie-hellman-ratchet :initarg :diffie-hellman-ratchet
-                            :accessor diffie-hellman-ratchet))
+   (%ratchet :initarg :ratchet
+             :accessor ratchet))
   (:default-initargs
    :keys (make-25519-keys)
+   :ratchet nil
    :ephemeral-key-1 (make-25519-keys)
    :ephemeral-key-2 (make-25519-keys)
    :ephemeral-key-3 (make-25519-keys)
@@ -103,9 +120,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :long-term-identity-key (make-25519-keys)))
 
 (defclass remote-client (client)
-  ()
-  (:default-initargs
-   :keys (make-25519-keys)))
+  ())
 
 (defclass local-client (client)
   ())

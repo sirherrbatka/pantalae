@@ -160,7 +160,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   nil)
 
 (defmethod handle-incoming-packet ((nest nest) connection (type (eql +type-echo+)) packet)
-  (log4cl:log-info "Echo: ~a." (~>> packet (decrypt connection) conspack:decode)))
+  (log4cl:log-info "Echo decrypted: ~a." (decrypt connection packet)))
 
 (defmethod handle-incoming-packet ((nest nest) connection (type (eql +type-ping+)) packet)
   (log4cl:log-debug "Got ping.")
@@ -175,8 +175,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (type (eql +type-message+))
                                    packet)
   (log4cl:log-debug "Got message packet!")
-  (bind ((message (~>> packet  conspack:decode)))
-    (handle-incoming-message nest connection message)))
+  (~>> (decrypt connection packet)
+       conspack:decode
+       (handle-incoming-message nest connection)))
 
 (defmethod handle-incoming-packet ((nest nest)
                                    connection
@@ -273,9 +274,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod send-message ((nest nest) connection message)
   (setf (destination message) (destination connection))
-  (send-packet connection
-               +type-message+
-               (conspack:encode message)))
+  (~>> (conspack:encode message)
+       (encrypt connection)
+       (send-packet connection +type-message+)))
 
 (defmethod discover-peers ((nest nest))
   (let* ((public-key (~> nest long-term-identity-key pantalea.cryptography:public))
@@ -287,3 +288,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             (curry #'forget-message nest id)
                             #.(* 10 60 1000))
     (spread-message nest public-key message public-key)))
+
+(defmethod destination-public-key ((connection fundamental-connection))
+  (~> connection
+      double-ratchet
+      pantalea.cryptography:remote-client
+      pantalea.cryptography:long-term-identity-key
+      pantalea.cryptography:public))

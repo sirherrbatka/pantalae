@@ -26,13 +26,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric sending-chain (ratchet))
 (defgeneric receiving-chain (ratchet))
 (defgeneric kdf (chain))
-(defgeneric forward (chain bytes &optional length))
+(defgeneric forward (chain bytes))
 (defgeneric steps (chain))
 (defgeneric (setf steps) (new-value chain))
 (defgeneric key (chain))
 (defgeneric (setf key) (new-value chain))
-(defgeneric move-ratchet (ratchet &optional bytes))
-(defgeneric next-key (ratchet &optional bytes))
+(defgeneric next-key (ratchet &optional inb))
 (defgeneric constant (symmetric-key-ratchet))
 (defgeneric symetric-key-ratchet (diffie-hellman-ratchet))
 (defgeneric private-key (diffie-hellman-ratchet))
@@ -43,8 +42,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric signed-pre-key (client))
 (defgeneric exchange-keys* (this-client other-client))
 (defgeneric encrypt* (this-client other-client message start end result))
-(defgeneric decrypt* (this-client other-client cipher start end result))
-(defgeneric rotate-ratchet (this-client public-key))
+(defgeneric decrypt* (this-client other-client cipher-text start end result))
+
+(defgeneric dh-ratchet (this-client
+                       public-key
+                       number-of-sent-messages
+                       number-of-messages-in-previous-sending-chain)))
+
 (defgeneric encrypt (double-ratchet message start end &optional result))
-(defgeneric decrypt (double-ratchet cippher key start end &optional result))
+(defgeneric decrypt (double-ratchet data start end &optional result))
 (defgeneric long-term-identity-remote-key (double-ratchet))
+(defgeneric can-encrypt-p (double-ratchet))

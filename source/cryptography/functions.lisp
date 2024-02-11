@@ -38,29 +38,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (conspack:encode-to-file keys destination))
   keys)
 
-(defun make-chain (key)
-  (make-instance 'chain :key key))
+(defun make-ratchet (sk local-private-key remote-public-key direction)
+  (if direction
 
-(defun make-symmetric-ratchet (key)
-  (make-instance 'symmetric-ratchet :chain (make-chain key)))
-
-(defun make-diffie-hellman-ratchet (shared-key &optional (root-ratchet (make-symmetric-ratchet shared-key)))
-  (let* ((recv-chain (make-symmetric-ratchet (next-key root-ratchet)))
-         (send-ratchet (make-symmetric-ratchet (next-key root-ratchet))))
-    (make-instance 'diffie-hellman-ratchet
-                   :root-ratchet root-ratchet
-                   :receiving-ratchet recv-chain
-                   :sending-ratchet send-ratchet)))
+      (make 'ratchet
+            :root-key sk
+            :send-keys local-private-key)))
 
 (defun exchange-keys (this-client other-client)
   (exchange-keys* this-client other-client)
-  (setf (slot-value this-client '%diffie-hellman-ratchet) (make-diffie-hellman-ratchet (shared-key this-client))
-        (slot-value other-client '%diffie-hellman-ratchet) (make-diffie-hellman-ratchet (shared-key other-client)))
   nil)
 
 (defun make-double-ratchet (local-client remote-client)
   (check-type local-client local-client)
-  (check-type remote-client remote-client)
+  (check-type remote-client client)
   (exchange-keys local-client remote-client)
   (make-instance 'double-ratchet
                   :local-client local-client
@@ -84,3 +75,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  :ephemeral-key-2 (make-instance 'keys-pair :public eph2)
                  :ephemeral-key-3 (make-instance 'keys-pair :public eph3)
                  :ephemeral-key-4 (make-instance 'keys-pair :public eph4)))
+
+(defun kdf-rk (kdf rk dh-out)
+  "Returns a pair (32-byte root key, 32-byte chain key) as the output of applying a KDF keyed by a 32-byte root key rk to a Diffie-Hellman output dh-out."
+  (let ((output (ic:derive-key kdf
+                               rk
+                               dh-out
+                               8
+                               64)))
+    (values (subseq output 0 32) (subseq output 32))))
+
+(defun kdf-ck (ratchet chain-key)
+  "Returns a tuple (32-byte chain key, 32-byte message key, 16-byte initialization vector ) as the output of applying a KDF keyed by a 32-byte chain key ck to some constant."
+  (let ((output (ic:derive-key (kdf ratchet)
+                               chain-key
+                               (constant ratchet)
+                               8
+                               80)))
+    (values (subseq output 0 32) (subseq output 32 64) (subseq output 64))))
