@@ -86,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (values (subseq output 0 32) (subseq output 32))))
 
 (defun kdf-ck (ratchet chain-key)
-  "Returns a tuple (32-byte chain key, 32-byte message key, 16-byte initialization vector ) as the output of applying a KDF keyed by a 32-byte chain key ck to some constant."
+  "Returns a tuple (32-byte chain key, 32-byte message key, 16-byte initialization vector) as the output of applying a KDF keyed by a 32-byte chain key ck to some constant."
   (let ((output (ic:derive-key (kdf ratchet)
                                chain-key
                                (constant ratchet)

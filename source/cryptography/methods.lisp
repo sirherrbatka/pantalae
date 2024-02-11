@@ -162,7 +162,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod decrypt ((double-ratchet double-ratchet)
                     data
-                    key
                     start
                     end
                     &optional (result (make-array (array-dimensions (first data)) :element-type '(unsigned-byte 8))))

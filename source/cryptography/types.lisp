@@ -88,7 +88,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :number-of-sent-messages 0
    :number-of-received-messages 0
-   :send-keys (make-25519-keys)
    :root-key nil
    :constant (ic:make-random-salt 0)
    :kdf (ic:make-kdf :hmac-kdf :digest :sha256)))
