@@ -60,7 +60,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                          :root-key rk
                                          :chain-key-send cks
                                          :send-keys (ephemeral-key-1 client-a)
-                                         :receive-key (~> client-b ephemeral-key-1 public ic:curve25519-key-y)
+                                         :receive-key (ephemeral-key-1 client-b)
                                          :chain-key-receive nil))))
       (let* ((dh1 (exchange-25519-key (~> client-a ephemeral-key-1 private)
                                       (~> client-b long-term-identity-key public)))
@@ -115,6 +115,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                        public-key
                        number-of-sent-messages
                        number-of-messages-in-previous-sending-chain)
+  (log:debug "~a" public-key)
+  (log:debug "~a" (receive-key (ratchet this-client)))
   (let ((ratchet (ratchet this-client)))
     (when (and (not (null (receive-key ratchet)))
                (vector= (ironclad:curve25519-key-y (receive-key ratchet))
