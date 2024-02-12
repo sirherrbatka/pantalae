@@ -38,13 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (conspack:encode-to-file keys destination))
   keys)
 
-(defun make-ratchet (sk local-private-key remote-public-key direction)
-  (if direction
-
-      (make 'ratchet
-            :root-key sk
-            :send-keys local-private-key)))
-
 (defun exchange-keys (this-client other-client)
   (exchange-keys* this-client other-client)
   nil)
@@ -76,9 +69,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  :ephemeral-key-3 (make-instance 'keys-pair :public eph3)
                  :ephemeral-key-4 (make-instance 'keys-pair :public eph4)))
 
-(defun kdf-rk (kdf rk dh-out)
+(defun kdf-rk (rk dh-out)
   "Returns a pair (32-byte root key, 32-byte chain key) as the output of applying a KDF keyed by a 32-byte root key rk to a Diffie-Hellman output dh-out."
-  (let ((output (ic:derive-key kdf
+  (let ((output (ic:derive-key (ic:make-kdf :hmac-kdf :digest :sha256)
                                rk
                                dh-out
                                8
@@ -87,7 +80,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun kdf-ck (ratchet chain-key)
   "Returns a tuple (32-byte chain key, 32-byte message key, 16-byte initialization vector) as the output of applying a KDF keyed by a 32-byte chain key ck to some constant."
-  (let ((output (ic:derive-key (kdf ratchet)
+  (let ((output (ic:derive-key (ic:make-kdf :hmac-kdf :digest :sha256)
                                chain-key
                                (constant ratchet)
                                8

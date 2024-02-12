@@ -41,3 +41,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun exchange-25519-key (private-key public-key)
   (ic:diffie-hellman private-key public-key))
+
+(defun padding-bytes-count (length)
+  (- 16 (mod length 16)))
+
+(defun make-padded-vector-for-length (length)
+  (let ((padding-bytes-count (padding-bytes-count length)))
+    (make-array (+ length padding-bytes-count)
+                :element-type '(unsigned-byte 8)
+                :initial-element padding-bytes-count)))
+
+(defun make-padded-vector (vector)
+  (make-padded-vector-of-length (length vector)))
+
+(defun pkcs7-pad (vector)
+  (declare (type (simple-array (unsigned-byte 8) (*)) vector))
+  (iterate
+    (with result = (make-padded-vector vector))
+    (for i from 0 below (length vector))
+    (setf (aref result i) (aref vector i))
+    (finally (return result))))
+
+(defun pkcs7-unpad (vector)
+  (declare (type (simple-array (unsigned-byte 8) (*)) vector))
+  (subseq vector 0 (- (length vector) (last-elt vector))))

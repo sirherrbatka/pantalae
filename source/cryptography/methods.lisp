@@ -52,17 +52,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (~> client-b long-term-identity-key public))))
         (setf (slot-value client-a '%shared-key) (concatenate '(simple-array (unsigned-byte 8) (*)) dh1 dh2 dh3 dh4)
               (slot-value client-b '%shared-key) (slot-value client-a '%shared-key)
-              (ratchet client-a) (bind ((kdf (ic:make-kdf :hmac-kdf :digest :sha256))
-                                        (sk (slot-value client-a '%shared-key)) ; this is remote-client RK
+              (ratchet client-a) (bind ((sk (slot-value client-a '%shared-key)) ; this is remote-client RK
                                         ((:values rk cks)
-                                         (kdf-rk kdf sk (exchange-25519-key (~> client-a ephemeral-key-1 private)
+                                         (kdf-rk sk (exchange-25519-key (~> client-a ephemeral-key-1 private)
                                                                             (~> client-b ephemeral-key-1 public)))))
                                    (make 'ratchet
                                          :root-key rk
                                          :chain-key-send cks
                                          :send-keys (ephemeral-key-1 client-a)
                                          :receive-key (~> client-b ephemeral-key-1 public ic:curve25519-key-y)
-                                         :kdf kdf
                                          :chain-key-receive nil))))
       (let* ((dh1 (exchange-25519-key (~> client-a ephemeral-key-1 private)
                                       (~> client-b long-term-identity-key public)))
@@ -83,52 +81,51 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod encrypt* ((this-client client)
                      (other-client client)
                      message
-                     start
-                     end
                      result)
   (bind ((ratchet (ratchet this-client))
          ((:values chain-key message-key initialization-vector) (kdf-ck ratchet (cks ratchet))))
     (incf (number-of-sent-messages ratchet))
     (setf (cks ratchet) chain-key)
-    (ic:encrypt (ic:make-cipher :aes :key message-key :mode :cbc :initialization-vector initialization-vector)
-                message
-                result
-                :ciphertext-end end
-                :ciphertext-start start
-                :plaintext-start start
-                :plaintext-end end)
+    (ic:encrypt (ic:make-cipher :aes
+                                :key message-key
+                                :mode :cbc
+                                :padding :pkcs7
+                                :initialization-vector initialization-vector)
+                (pkcs7-pad message)
+                result)
     result))
 
 (defmethod decrypt* ((this-client client)
                      (other-client client)
                      ciphertext
-                     start
-                     end
                      result)
   (bind ((ratchet (ratchet this-client))
          ((:values chain-key message-key iv) (kdf-ck ratchet (ckr ratchet))))
     (setf (ckr ratchet) chain-key)
     (incf (number-of-received-messages ratchet))
-    (ic:decrypt (ic:make-cipher :aes :key message-key :mode :cbc :initialization-vector iv)
+    (ic:decrypt (ic:make-cipher :aes
+                                :key message-key
+                                :mode :cbc
+                                :padding :pkcs7
+                                :initialization-vector iv)
                 ciphertext
-                result
-                :plaintext-start start
-                :plaintext-end end
-                :ciphertext-start start
-                :ciphertext-end end)
-    result))
+                result)
+    (pkcs7-unpad result)))
 
 (defmethod dh-ratchet ((this-client client)
                        public-key
                        number-of-sent-messages
                        number-of-messages-in-previous-sending-chain)
   (let ((ratchet (ratchet this-client)))
+    (when (and (not (null (receive-key ratchet)))
+               (vector= (ironclad:curve25519-key-y (receive-key ratchet))
+                        (ironclad:curve25519-key-y public-key)))
+      (return-from dh-ratchet nil))
     (shiftf (number-of-messages-in-previous-sending-chain ratchet)
             (number-of-sent-messages ratchet)
             0)
     (bind (((:values rk ckr)
-            (kdf-rk (kdf ratchet)
-                    (rk ratchet)
+            (kdf-rk (rk ratchet)
                     (exchange-25519-key (~> ratchet send-keys private)
                                         public-key))))
       (setf (receive-key ratchet) public-key
@@ -136,24 +133,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (ckr ratchet) ckr
             (send-keys ratchet) (make-25519-keys)))
     (bind (((:values rk cks)
-            (kdf-rk (kdf ratchet)
-                    (rk ratchet)
+            (kdf-rk (rk ratchet)
                     (exchange-25519-key (~> ratchet send-keys private)
                                         (receive-key ratchet)))))
       (setf (root-key ratchet) rk
-            (cks ratchet) cks))))
+            (cks ratchet) cks)))
+  nil)
 
 (defmethod encrypt ((double-ratchet double-ratchet)
                     message
-                    start
-                    end
-                    &optional (result (make-array (array-dimensions message) :element-type '(unsigned-byte 8))))
+                    &optional (result (make-padded-vector message)))
   (bt2:with-lock-held ((lock double-ratchet))
     (let ((result (encrypt* (local-client double-ratchet)
                             (remote-client double-ratchet)
                             message
-                            start
-                            end
                             result)))
       (list result
             (~> double-ratchet local-client ratchet send-keys public)
@@ -162,8 +155,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod decrypt ((double-ratchet double-ratchet)
                     data
-                    start
-                    end
                     &optional (result (make-array (array-dimensions (first data)) :element-type '(unsigned-byte 8))))
   (bind (((ciphertext send-key number-of-sent-messages number-of-messages-in-previous-sending-chain) data))
     (bt2:with-lock-held ((lock double-ratchet))
@@ -174,8 +165,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (decrypt* (local-client double-ratchet)
                 (remote-client double-ratchet)
                 ciphertext
-                start
-                end
                 result))))
 
 (defmethod long-term-identity-remote-key ((object double-ratchet))

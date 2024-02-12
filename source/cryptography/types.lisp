@@ -79,9 +79,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor number-of-messages-in-previous-sending-chain
     :initarg :number-of-messages-in-previous-sending-chain
     :initform 0)
-   (%kdf
-    :initarg :kdf
-    :reader kdf)
    (%constant
     :initarg :constant
     :reader constant))
@@ -89,8 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :number-of-sent-messages 0
    :number-of-received-messages 0
    :root-key nil
-   :constant (ic:make-random-salt 0)
-   :kdf (ic:make-kdf :hmac-kdf :digest :sha256)))
+   :constant (ic:make-random-salt 0)))
 
 (defclass client ()
   ((%long-term-identity-key :initarg :long-term-identity-key

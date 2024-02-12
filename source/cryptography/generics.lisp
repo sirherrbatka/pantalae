@@ -41,15 +41,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric long-term-identity-key (client))
 (defgeneric signed-pre-key (client))
 (defgeneric exchange-keys* (this-client other-client))
-(defgeneric encrypt* (this-client other-client message start end result))
-(defgeneric decrypt* (this-client other-client cipher-text start end result))
-
+(defgeneric encrypt* (this-client other-client message result))
+(defgeneric decrypt* (this-client other-client cipher-text result))
 (defgeneric dh-ratchet (this-client
                        public-key
                        number-of-sent-messages
-                       number-of-messages-in-previous-sending-chain)))
-
-(defgeneric encrypt (double-ratchet message start end &optional result))
-(defgeneric decrypt (double-ratchet data start end &optional result))
+                       number-of-messages-in-previous-sending-chain))
+(defgeneric encrypt (double-ratchet message &optional result))
+(defgeneric decrypt (double-ratchet data &optional result))
 (defgeneric long-term-identity-remote-key (double-ratchet))
 (defgeneric can-encrypt-p (double-ratchet))
