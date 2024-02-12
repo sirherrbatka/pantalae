@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:remote-client
    #:make-double-ratchet
    #:decrypt
+   #:can-encrypt-p
    #:long-term-identity-remote-key
    #:long-term-identity-key
    #:private

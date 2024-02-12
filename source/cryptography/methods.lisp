@@ -75,7 +75,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (ratchet client-a) (make 'ratchet
                                        :root-key (slot-value client-a '%shared-key)
                                        :send-keys (~> client-a ephemeral-key-1)))))
-
   nil)
 
 (defmethod encrypt* ((this-client client)

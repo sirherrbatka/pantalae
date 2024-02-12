@@ -42,21 +42,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (double-ratchet connection) (dr:make-double-ratchet local-client remote-client))))
 
 (defun decrypt (connection packet)
-  (bind (((key data) (conspack:decode packet)))
-    (dr:decrypt (double-ratchet connection)
-                data
-                key
-                0
-                (length data)
-                data)))
+  (dr:decrypt (double-ratchet connection)
+              (conspack:decode packet)))
 
-(defun encrypt (connection packet &optional (result packet))
+(defun encrypt (connection packet)
   (~> connection
       double-ratchet
-      (pantalea.cryptography:encrypt packet
-                                     0
-                                     (length packet)
-                                     result)
+      (pantalea.cryptography:encrypt packet)
       conspack:encode))
 
 (defun run-event-loop (nest)
@@ -73,3 +65,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (return-from run-event-loop nil))
       (error (e)
         (log4cl:log-error "Error on the nest event loop thread ~a" e)))))
+
+(defun send-echo (connection)
+  (pantalea.transport.protocol:send-packet connection
+                                           pantalea.transport.protocol:+type-echo+
+                                           (encrypt connection (lret ((result (make-array 8 :element-type '(unsigned-byte 8))))
+                                                                 (setf (aref result 0) 2
+                                                                       (aref result 1) 1
+                                                                       (aref result 2) 3
+                                                                       (aref result 3) 7
+                                                                       (aref result 4) 2
+                                                                       (aref result 5) 1
+                                                                       (aref result 6) 3
+                                                                       (aref result 7) 7)))))

@@ -69,6 +69,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peer-discovery-request
    #:peer-discovery-response
    #:per-discovery-response
+   #:send-echo
    #:discover-peers
    #:ping-at
    #:pong-at
