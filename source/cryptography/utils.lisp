@@ -52,7 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 :initial-element padding-bytes-count)))
 
 (defun make-padded-vector (vector)
-  (make-padded-vector-of-length (length vector)))
+  (make-padded-vector-for-length (length vector)))
 
 (defun pkcs7-pad (vector)
   (declare (type (simple-array (unsigned-byte 8) (*)) vector))
@@ -64,4 +64,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun pkcs7-unpad (vector)
   (declare (type (simple-array (unsigned-byte 8) (*)) vector))
-  (subseq vector 0 (- (length vector) (last-elt vector))))
+  (make-array (- (length vector) (last-elt vector))
+              :element-type '(unsigned-byte 8)
+              :displaced-to vector
+              :displaced-index-offset 0))
