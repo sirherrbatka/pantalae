@@ -55,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               (ratchet client-a) (bind ((sk (slot-value client-a '%shared-key)) ; this is remote-client RK
                                         ((:values rk cks)
                                          (kdf-rk sk (exchange-25519-key (~> client-a ephemeral-key-1 private)
-                                                                            (~> client-b ephemeral-key-1 public)))))
+                                                                        (~> client-b ephemeral-key-1 public)))))
                                    (make 'ratchet
                                          :root-key rk
                                          :chain-key-send cks
