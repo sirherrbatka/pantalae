@@ -67,10 +67,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (ironclad:decrypt-in-place cipher buffer)
   buffer)
 
-(defun make-response (message payload-class &rest keys)
-  (~> message
-      origin-public-key
-      ironclad:curve25519-key-y
-      (ironclad:make-cipher :aes :mode :ecb :key _)
-      (encrypt-in-place (conspack:encode (apply #'make-instance payload-class keys)))
-      (make 'response :id (id message) :encrypted-payload _)))
+(defun make-response (this-key message payload-class &rest keys)
+  (~> message origin-public-key
+      (ironclad:diffie-hellman (dr:private this-key) _)
+      (ironclad:make-cipher :blowfish :mode :ecb :key _)
+      (encrypt-in-place (dr:pkcs7-pad (conspack:encode (apply #'make-instance payload-class
+                                                              keys))))
+      (make 'response :id (id message) :encrypted-payload _ :origin-public-key (dr:public this-key))))

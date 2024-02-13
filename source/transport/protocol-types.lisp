@@ -175,14 +175,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%id
     :initarg :id
     :reader id)
+   (%origin-public-key
+    :initarg :origin-public-key
+    :reader origin-public-key)
    (%encrypted-payload
     :initarg :encrypted-payload
     :reader encrypted-payload)))
 
 (defclass response-payload ()
-  ((%origin-public-key
-    :initarg :origin-public-key
-    :reader origin-public-key)))
+  ())
 
 (defclass peer-discovery-payload (response-payload)
   ((%destination
@@ -205,9 +206,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%id
     :reader id
     :initarg :id)
-   (%origin-public-key
-    :reader origin-public-key
-    :initarg :origin-public-key)
    (%nest
     :reader read-nest
     :initarg :nest)

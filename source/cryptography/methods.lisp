@@ -60,7 +60,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                          :root-key rk
                                          :chain-key-send cks
                                          :send-keys (ephemeral-key-1 client-a)
-                                         :receive-key (ephemeral-key-1 client-b)
+                                         :receive-key (private (ephemeral-key-1 client-b))
                                          :chain-key-receive nil))))
       (let* ((dh1 (exchange-25519-key (~> client-a ephemeral-key-1 private)
                                       (~> client-b long-term-identity-key public)))

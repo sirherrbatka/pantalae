@@ -175,9 +175,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (type (eql +type-message+))
                                    packet)
   (log4cl:log-debug "Got message packet!")
-  (~>> (decrypt connection packet)
-       conspack:decode
-       (handle-incoming-message nest connection)))
+  (bind ((decrypted-message (decrypt connection packet)))
+    (~>> decrypted-message
+         conspack:decode
+         (handle-incoming-message nest connection))))
 
 (defmethod handle-incoming-packet ((nest nest)
                                    connection
@@ -236,23 +237,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                      connection)
   ;; connect, maybe? Wed Jan 31 15:01:00 2024
   (log4cl:log-debug "Got peer discovery response!")
-  (let ((payload (~> nest
-                     long-term-identity-key
-                     pantalea.cryptography:private
-                     ironclad:curve25519-key-y
-                     (ironclad:make-cipher :aes :mode :ecb :key _)
-                     (decrypt-in-place (encrypted-payload response))
-                     conspack:decode)))))
+  (bind (((:accessors origin-public-key encrypted-payload) response)
+         (payload (~> nest long-term-identity-key dr:private
+                      (ironclad:diffie-hellman origin-public-key)
+                      (ironclad:make-cipher :blowfish :mode :ecb :key _)
+                      (decrypt-in-place encrypted-payload)
+                      conspack:decode)))
+    (log4cl:log-debug "~a" payload)))
 
 (defmethod handle-incoming-message ((nest nest)
                                     connection
                                     (message peer-discovery-request))
   (log4cl:log-debug "Got peer discovery request!")
-  (send-response nest connection message
-                 (make-response message
-                     'peer-discovery-payload
-                     :origin-public-key (long-term-identity-key nest)
-                     :destination (destination message))))
+  (~> (make-response  (long-term-identity-key nest)
+                      message 'peer-discovery-payload
+                      :destination (destination message))
+      (send-response nest connection message _)))
 
 (defmethod send-response ((nest nest) connection message response)
   (send-packet connection

@@ -34,6 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:make-double-ratchet
    #:decrypt
    #:can-encrypt-p
+   #:pkcs7-pad
+   #:pkcs7-unpad
    #:long-term-identity-remote-key
    #:long-term-identity-key
    #:private
