@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (error (e)
         (log4cl:log-error "Error on the nest event loop thread ~a" e)))))
 
-(defun decrypt-payload (nest handler response)
+(defun decrypt-payload (nest response)
   (bind (((:accessors origin-public-key encrypted-payload) response)
          (payload (~> nest long-term-identity-key dr:private
                       (ironclad:diffie-hellman origin-public-key)
