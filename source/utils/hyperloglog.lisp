@@ -26,7 +26,6 @@
 (-> beta ((double-float 0.0d0)) double-float)
 (declaim (inline beta))
 (defun beta (ez)
-  (declare (optimize (speed 3) (safety 0)))
   (let ((zl (log (1+ ez))))
     (declare (type double-float ez)
              (type (double-float 0.0d0 *) zl))
@@ -42,13 +41,11 @@
 
 (-> new-register ((unsigned-byte 8) (unsigned-byte 16)) register)
 (defun new-register (rank sig)
-  (declare (optimize (speed 3)))
   (logior (ash rank +r+) sig))
 
 (-> reg-sum-and-zeroes ((simple-array register (*))) (values double-float double-float))
 (declaim (inline reg-sum-and-zeroes))
 (defun reg-sum-and-zeroes (registers)
-  (declare (optimize (speed 3) (safety 0)))
   (iterate
     (declare (type fixnum i)
              (type double-float sum ez))
@@ -81,7 +78,6 @@
 (declaim (inline xorshift))
 (-> xorshift (integer integer) integer)
 (defun xorshift (n i)
-  (declare (optimize (speed 3) (safety 0)))
   (logxor n (ash n (- i))))
 
 (declaim (inline hash-integer))
@@ -89,7 +85,6 @@
                                                                 (unsigned-byte 64)))
 (defun hash-integer (n &optional (multi #x2545F4914F6CDD1D))
   "Attempts to randomize bits. Uses xorshift* algorithm."
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
   (let* ((new-state (~> (xorshift n 12) (xorshift -25) (ldb (byte 64 0) _)
                         (xorshift 27) (ldb (byte 64 0) _))))
     (values (ldb (byte 64 0) (* new-state multi))
@@ -98,12 +93,10 @@
 (-> hash-shifts ((unsigned-byte 64)) (unsigned-byte 16))
 (declaim (inline hash-shifts))
 (defun hash-shifts (y)
-  (declare (optimize (speed 3)))
   (ldb (byte 16 #.(- 64 +r+)) (hash-integer y)))
 
 (-> add-hash! (sketch (unsigned-byte 64)) sketch)
 (defun add-hash! (sketch x)
-  (declare (optimize (speed 3)))
   (maxf (aref sketch (ash x #.(- +max+)))
         (new-register (hll-rank x) (hash-shifts x)))
   sketch)
@@ -164,7 +157,6 @@
 (-> cardinality (sketch) double-float)
 (declaim (inline cardinality))
 (defun cardinality (sketch)
-  (declare (optimize (speed 3)))
   (bind (((:values sum ez) (reg-sum-and-zeroes sketch)))
     (declare (type double-float sum ez))
     (/ (* #.(* +alpha+ +m+) (- +m+ ez))
@@ -172,7 +164,6 @@
 
 (-> jaccard (sketch sketch) double-float)
 (defun jaccard (a b)
-  (declare (optimize (speed 3) (safety 0)))
   (let ((c 0) (n 0))
     (declare (type fixnum c n))
     (iterate
@@ -208,3 +199,12 @@
 (-> intersection-cardinality (sketch sketch) double-float)
 (defun intersection-cardinality (a b)
   (~> (hll-union a b) cardinality (* (jaccard a b)) (+ 0.5d0)))
+
+(defun hash-vector (input)
+  (declare (type vector input))
+  (iterate
+    (declare (type (unsigned-byte 64) elt seed))
+    (with seed = #x5555555555555555)
+    (for elt in-vector input)
+    (setf seed (~> (logxor seed elt) hash-integer))
+    (finally (return seed))))
