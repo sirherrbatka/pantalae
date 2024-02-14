@@ -300,7 +300,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                 (for (score destination key) in responses)
                                 (ignore-errors (connect nest destination)))
                               (forget-message nest id))
-                            #.(* 1 60 1000))
+                            #.(* 5 60 1000))
     (spread-message nest public-key message public-key)))
 
 (defmethod destination-public-key ((connection fundamental-connection))
