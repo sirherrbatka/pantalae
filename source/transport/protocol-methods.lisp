@@ -296,9 +296,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                               (log:info "Connecting to discovered peers.")
                               (iterate
                                 (declare (ignorable key score))
-                                (repeat new-connections-count)
+                                (while (<= connected new-connections-count))
                                 (for (score destination key) in responses)
-                                (ignore-errors (connect nest destination)))
+                                (counting (nth-value 1 (connect nest destination)) into connected))
                               (forget-message nest id))
                             #.(* 5 60 1000))
     (spread-message nest public-key message public-key)))

@@ -202,12 +202,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 (finding connection such-that (eq (other-nest connection) (other-nest destination))))))
       (progn
         (log4cl:log-info "Using existing connection.")
-        existing)
+        (values existing nil))
       (let ((connection (~> destination other-nest (make-connection nest))))
         (vector-push-extend connection (~> nest intra-networking connections))
         (~> nest intra-networking connections
             last-elt (run-connection nest (curry #'p:connected nest destination connection)))
-        connection))))
+        (values connection t)))))
 
 (defmethod p:map-connections ((networking networking) function)
   (map nil function (connections networking)))
