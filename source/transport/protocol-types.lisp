@@ -67,9 +67,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor routing-table)
    (%long-term-identity-key
     :initarg :long-term-identity-key
-    :accessor long-term-identity-key))
+    :accessor long-term-identity-key)
+   (%maximum-connections-count
+    :initarg :maximum-connections-count
+    :accessor maximum-connections-count))
   (:default-initargs
    :message-table (make 'message-table)
+   :maximum-connections-count 16
    :started nil
    :timing-wheel nil
    :event-loop-thread nil
@@ -217,4 +221,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :connection)))
 
 (defclass peer-discovery-handler (message-handler)
-  ())
+  ((%responses
+    :initarg :responses
+    :accessor responses
+    :initform '())))

@@ -103,13 +103,13 @@
   sketch)
 
 (-> expected-collisions ((double-float 0.0d0) (double-float 0.0d0)) double-float)
-(declaim (inline expected-collisions))
+(declaim (notinline expected-collisions))
 (defun expected-collisions (n m)
   (iterate
-    (declare (type (double-float 0.0d0) x b1 b2 power den b2d
+    (declare (type double-float x b1 b2 power den b2d
                    b1d prx pry)
              (type fixnum i)
-             (optimize (speed 3) (safety 0)))
+             (optimize (debug 3) (safety 3)))
     (for i from 1 to +2Q+)
     (with den = 0.0d0)
     (with power = 0.0d0)
@@ -141,8 +141,9 @@
     (finally (return (+ 0.5d0 (* x +p+))))))
 
 (-> approximated-expected-collisions (double-float double-float) double-float)
-(declaim (inline approximated-expected-collisions))
+(declaim (notinline approximated-expected-collisions))
 (defun approximated-expected-collisions (first second)
+  (declare (optimize (debug 3)))
   (bind (((:values n m) (if (< first second)
                             (values second first)
                             (values first second))))
@@ -165,31 +166,34 @@
 
 (-> jaccard (sketch sketch) double-float)
 (defun jaccard (a b)
-  (let ((c 0) (n 0))
-    (declare (type fixnum c n))
-    (iterate
-      (declare (type fixnum i)
-               (type register ea eb))
-      (for i from 0 below +m+)
-      (for ea = (aref a i))
-      (for eb = (aref b i))
-      (when (and (not (zerop ea)) (= ea eb))
-        (incf c))
-      (unless (= ea eb 0)
-        (incf n)))
-    (when (= c 0)
-      (return-from jaccard 1.0d0))
-    (let* ((c1 (cardinality a))
-           (c2 (cardinality b))
-           (ec (approximated-expected-collisions c1 c2)))
-      (declare (type double-float c1 c2 ec))
-      (if (< c ec)
-          1.0d0
-          (- 1.0d0 (/ (- c ec) n))))))
+  (or (ignore-errors
+       (let ((c 0) (n 0))
+         (declare (type fixnum c n)
+                  (optimize (debug 3)))
+         (iterate
+           (declare (type fixnum i)
+                    (type register ea eb))
+           (for i from 0 below +m+)
+           (for ea = (aref a i))
+           (for eb = (aref b i))
+           (when (and (not (zerop ea)) (= ea eb))
+             (incf c))
+           (unless (= ea eb 0)
+             (incf n)))
+         (when (= c 0)
+           (return-from jaccard 1.0d0))
+         (let* ((c1 (cardinality a))
+                (c2 (cardinality b))
+                (ec (approximated-expected-collisions c1 c2)))
+           (declare (type double-float c1 c2 ec))
+           (if (< c ec)
+               1.0d0
+               (- 1.0d0 (/ (- c ec) n))))))
+      0.0d0))
 
 (defun hll-union (sketch &rest more-sketches)
   (iterate
-    (with result = (new-sketch))
+    (with result = (make-sketch))
     (for s in (cons sketch more-sketches))
     (iterate
       (declare (type fixnum i))

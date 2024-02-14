@@ -185,8 +185,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (type (eql +type-response+))
                                    packet)
   (log4cl:log-debug "Got response packet!")
-  (bind ((response (conspack:decode packet))
-         (handler (gethash (id response) (~> nest message-table active-messages))))
+  (bind ((response (~>> packet conspack:decode))
+         (handler (gethash (id response) (~>> nest message-table active-messages))))
     (unless (null handler)
       (handle-incoming-response nest handler response packet connection))))
 
@@ -238,25 +238,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ;; connect, maybe? Wed Jan 31 15:01:00 2024
   (log4cl:log-debug "Got peer discovery response!")
   (let ((payload (decrypt-payload nest response)))
-    (log4cl:log-debug "~a" payload)))
+    (push (list (connected-peers payload) (destination payload) (origin-public-key response))
+          (responses handler))))
 
 (defmethod handle-incoming-message ((nest nest)
                                     connection
                                     (message peer-discovery-request))
   (log4cl:log-debug "Got peer discovery request!")
-  (~> (make-response (long-term-identity-key nest)
-                     message 'peer-discovery-payload
-                     :connected-peers (lret ((sketch (hll:make-sketch)))
-                                        (map-connections nest
-                                                         (lambda (connection)
-                                                           (hll:add-key! sketch (destination-key connection)))))
-                     :destination (destination message))
-      (send-response nest connection message _)))
+  (when (< (connections-count nest) (maximum-connections-count nest))
+    (~> (make-response (long-term-identity-key nest)
+                       message 'peer-discovery-payload
+                       :connected-peers (connected-peers-sketch nest)
+                       :destination (destination message))
+        (send-response nest connection message _))))
 
 (defmethod send-response ((nest nest) connection message response)
-  (send-packet connection
-               +type-response+
-               (conspack:encode response)))
+  (~>> response conspack:encode
+       (send-packet connection +type-response+)))
 
 (defmethod forget-message ((nest nest) id)
   (remhash id (~> nest message-table active-messages))
@@ -284,8 +282,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (message-handler (make 'peer-discovery-handler :id id :nest nest)))
     (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
     (schedule-to-event-loop nest
-                            (curry #'forget-message nest id)
-                            #.(* 10 60 1000))
+                            (lambda (&aux
+                                  (connected-peers-sketch (connected-peers-sketch nest))
+                                  (connections-count (connections-count nest))
+                                  (maximum-connections-count (maximum-connections-count nest))
+                                  (new-connections-count (max 0 (- maximum-connections-count connections-count)))
+                                  (responses (~>> (responses message-handler)
+                                                  (mapcar (lambda (data)
+                                                            (cons (hll:jaccard connected-peers-sketch
+                                                                               (first data))
+                                                                  (rest data))))
+                                                  (sort _ #'> :key #'first)))) ; maximum distance first
+                              (log:info "Connecting to discovered peers.")
+                              (iterate
+                                (declare (ignorable key score))
+                                (repeat new-connections-count)
+                                (for (score destination key) in responses)
+                                (ignore-errors (connect nest destination)))
+                              (forget-message nest id))
+                            #.(* 1 60 1000))
     (spread-message nest public-key message public-key)))
 
 (defmethod destination-public-key ((connection fundamental-connection))

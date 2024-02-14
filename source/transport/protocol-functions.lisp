@@ -87,3 +87,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                                        (aref result 5) 1
                                                                        (aref result 6) 3
                                                                        (aref result 7) 7)))))
+
+(defun connections-count (nest)
+  (let ((result 0))
+    (map-connections nest (lambda (connection) (declare (ignore connection))
+                            (incf result)))
+    result))
