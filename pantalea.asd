@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 :components ((:file "packages")
                              (:file "skip-list")
                              (:file "queue")
+                             (:file "hyperloglog")
                              (:file "conditions")
                              (:file "dep")
                              (:file "promise")

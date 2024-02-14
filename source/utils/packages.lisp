@@ -34,6 +34,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:blocking-queue-push!
    #:blocking-queue-pop!))
 
+(cl:defpackage #:pantalea.utils.hyperloglog
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:jaccard
+   #:intersection-cardinality
+   #:add-hash!
+   #:new-sketch))
+
 (cl:defpackage #:pantalea.utils.skip-list
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames)
