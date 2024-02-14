@@ -244,9 +244,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                     connection
                                     (message peer-discovery-request))
   (log4cl:log-debug "Got peer discovery request!")
-  (~> (make-response  (long-term-identity-key nest)
-                      message 'peer-discovery-payload
-                      :destination (destination message))
+  (~> (make-response (long-term-identity-key nest)
+                     message 'peer-discovery-payload
+                     :connected-peers (lret ((sketch (hll:make-sketch)))
+                                        (map-connections nest
+                                                         (lambda (connection)
+                                                           (hll:add-key! sketch (destination-key connection)))))
+                     :destination (destination message))
       (send-response nest connection message _)))
 
 (defmethod send-response ((nest nest) connection message response)

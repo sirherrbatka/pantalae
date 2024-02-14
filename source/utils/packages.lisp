@@ -41,8 +41,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:jaccard
    #:intersection-cardinality
    #:add-hash!
+   #:add-key!
    #:hash-vector
-   #:new-sketch))
+   #:hash-key
+   #:make-sketch))
 
 (cl:defpackage #:pantalea.utils.skip-list
   (:use #:common-lisp #:pantalea.aux-package)

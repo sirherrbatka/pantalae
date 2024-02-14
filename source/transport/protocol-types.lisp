@@ -188,7 +188,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass peer-discovery-payload (response-payload)
   ((%destination
     :initarg :destination
-    :reader destination)))
+    :reader destination)
+   (%connected-peers
+    :initarg :connected-peers
+    :reader connected-peers)))
 
 (defclass fundamental-payload ()
   ())

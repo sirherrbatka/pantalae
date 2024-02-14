@@ -19,8 +19,8 @@
 (deftype sketch ()
   `(simple-array register (,+m+)))
 
-(-> new-sketch () sketch)
-(defun new-sketch ()
+(-> make-sketch () sketch)
+(defun make-sketch ()
   (make-array +m+ :element-type 'register))
 
 (-> beta ((double-float 0.0d0)) double-float)
@@ -96,6 +96,7 @@
   (ldb (byte 16 #.(- 64 +r+)) (hash-integer y)))
 
 (-> add-hash! (sketch (unsigned-byte 64)) sketch)
+(declaim (inline add-hash!))
 (defun add-hash! (sketch x)
   (maxf (aref sketch (ash x #.(- +max+)))
         (new-register (hll-rank x) (hash-shifts x)))
@@ -200,6 +201,7 @@
 (defun intersection-cardinality (a b)
   (~> (hll-union a b) cardinality (* (jaccard a b)) (+ 0.5d0)))
 
+(declaim (inline hash-vector))
 (defun hash-vector (input)
   (declare (type vector input))
   (iterate
@@ -208,3 +210,10 @@
     (for elt in-vector input)
     (setf seed (~> (logxor seed elt) hash-integer))
     (finally (return seed))))
+
+(declaim (inline hash-key))
+(defun hash-key (public-key)
+  (~> public-key ironclad:curve25519-key-y hash-vector))
+
+(defun add-key! (sketch key)
+  (add-hash! sketch (hash-key key)))

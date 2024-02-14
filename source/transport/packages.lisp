@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:local-nicknames
    (#:dr #:pantalea.cryptography)
    (#:promise #:pantalea.utils.promise)
+   (#:hll #:pantalea.utils.hyperloglog)
    (#:q #:pantalea.utils.queue)
    (#:tw #:pantalea.utils.timing-wheel)
    (#:dr #:pantalea.cryptography))
