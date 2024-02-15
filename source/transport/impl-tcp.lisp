@@ -350,3 +350,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:map-connections ((networking networking) function)
   (map nil function (socket-bundles networking)))
+
+(defmethod p:networking-symbol ((networking networking))
+  :tcp)

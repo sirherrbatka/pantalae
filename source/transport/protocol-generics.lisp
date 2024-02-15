@@ -35,7 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric handle-incoming-packet (nest connection type packet))
 (defgeneric send-packet (connection type packet))
 (defgeneric spread-message (nest origin message source-public-key))
-(defgeneric send* (nest connection type packet))
 (defgeneric stop-networking (nest networking))
 (defgeneric start-networking (nest networking))
 (defgeneric networking-of-type (nest type))
@@ -50,3 +49,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric send-message (nest connection message))
 (defgeneric send-response (nest connection message response))
 (defgeneric discover-peers (nest))
+(defgeneric networking-symbol (networking))
+(defgeneric add-networking (nest networking))

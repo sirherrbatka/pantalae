@@ -309,3 +309,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       pantalea.cryptography:remote-client
       pantalea.cryptography:long-term-identity-key
       pantalea.cryptography:public))
+
+(defmethod add-networking ((nest nest) networking)
+  (bt2:with-lock-held ((main-nest-lock nest))
+    (when (gethash (networking-symbol networking) (networking nest))
+      (error 'networking-already-present))
+    (setf (gethash (networking-symbol networking) (networking nest)) networking))
+  nest)

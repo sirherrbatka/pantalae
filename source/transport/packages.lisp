@@ -61,6 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:make-double-ratchet-local-client
    #:map-connections
    #:nest
+   #:networkind-symbol
    #:nest-started
    #:nest-stopped
    #:network-destination-peer
@@ -71,6 +72,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:peer-discovery-response
    #:per-discovery-response
    #:send-echo
+   #:add-networking
+   #:networking-symbol
    #:discover-peers
    #:ping-at
    #:pong-at

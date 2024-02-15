@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "methods")))
                (:module "transport"
                 :components ((:file "packages")
+                             (:file "protocol-conditions")
                              (:file "protocol-variables")
                              (:file "protocol-generics")
                              (:file "protocol-types")
