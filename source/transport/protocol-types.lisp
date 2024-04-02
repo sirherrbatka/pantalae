@@ -197,6 +197,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :connected-peers
     :reader connected-peers)))
 
+(defclass route-discovery-payload (response-payload)
+  ())
+
 (defclass fundamental-payload ()
   ())
 
@@ -221,6 +224,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :connection)))
 
 (defclass peer-discovery-handler (message-handler)
+  ((%responses
+    :initarg :responses
+    :accessor responses
+    :initform '())))
+
+(defclass route-discovery-handler (message-handler)
   ((%responses
     :initarg :responses
     :accessor responses

@@ -165,8 +165,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                           connection
                                                           type
                                                           packet))))
-                  (error (e)
-                    (log:info "~a" e)))
+                  (error (e) (log:info "~a" e)))
              (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
              (handler-case (p:schedule-to-event-loop nest (curry #'p:disconnected nest connection nil))
                (p:nest-stopped (e) (declare (ignore e)) nil))

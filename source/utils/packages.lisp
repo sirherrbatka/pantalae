@@ -34,6 +34,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:blocking-queue-push!
    #:blocking-queue-pop!))
 
+(cl:defpackage #:pantalea.utils.hashing
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:hash-key
+   #:hash-vector))
+
 (cl:defpackage #:pantalea.utils.hyperloglog
   (:use #:common-lisp #:pantalea.aux-package)
   (:local-nicknames)
@@ -44,6 +51,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:add-key!
    #:hash-vector
    #:hash-key
+   #:make-sketch))
+
+(cl:defpackage #:pantalea.utils.bloom-filter
+  (:use #:common-lisp #:pantalea.aux-package)
+  (:local-nicknames)
+  (:export
+   #:jaccard
+   #:add-hash!
+   #:add-key!
    #:make-sketch))
 
 (cl:defpackage #:pantalea.utils.skip-list

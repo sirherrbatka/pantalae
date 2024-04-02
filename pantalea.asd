@@ -35,6 +35,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   :components ((:file "aux-package")
                (:module "utils"
                 :components ((:file "packages")
+                             (:file "hashing")
+                             (:file "bloom-filter")
                              (:file "skip-list")
                              (:file "queue")
                              (:file "hyperloglog")

@@ -45,6 +45,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (dr:decrypt (double-ratchet connection)
               (conspack:decode packet)))
 
+(defun transcrypt (from-connection to-connection packet)
+  (~>> packet
+       (decrypt from-connection)
+       (encrypt to-connection)))
+
 (defun encrypt (connection packet)
   (~> connection
       double-ratchet
@@ -78,15 +83,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defun send-echo (connection)
   (pantalea.transport.protocol:send-packet connection
                                            pantalea.transport.protocol:+type-echo+
-                                           (encrypt connection (lret ((result (make-array 8 :element-type '(unsigned-byte 8))))
-                                                                 (setf (aref result 0) 2
-                                                                       (aref result 1) 1
-                                                                       (aref result 2) 3
-                                                                       (aref result 3) 7
-                                                                       (aref result 4) 2
-                                                                       (aref result 5) 1
-                                                                       (aref result 6) 3
-                                                                       (aref result 7) 7)))))
+                                           (encrypt connection (lret ((result (make-array 20 :element-type '(unsigned-byte 8))))
+                                                                 (iterate
+                                                                   (for i from 0 below 20)
+                                                                   (setf (aref result i) 20))))))
 
 (defun connections-count (nest)
   (let ((result 0))
