@@ -289,7 +289,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                   (new-connections-count (max 0 (- maximum-connections-count connections-count)))
                                   (responses (~>> (responses message-handler)
                                                   (mapcar (lambda (data)
-                                                            (cons (hll:jaccard connected-peers-sketch
+                                                            (cons (bloom:jaccard connected-peers-sketch
                                                                                (first data))
                                                                   (rest data))))
                                                   (sort _ #'> :key #'first)))) ; maximum distance first

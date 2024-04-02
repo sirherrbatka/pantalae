@@ -76,7 +76,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (make 'response :id (id message) :encrypted-payload _ :origin-public-key (dr:public this-key))))
 
 (defun connected-peers-sketch (nest)
-  (lret ((sketch (hll:make-sketch)))
+  (lret ((sketch (bloom:make-sketch)))
     (map-connections nest
                      (lambda (connection)
-                       (hll:add-key! sketch (destination-key connection))))))
+                       (bloom:add-key! sketch (destination-key connection))))))
