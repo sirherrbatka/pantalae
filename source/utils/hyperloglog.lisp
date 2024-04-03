@@ -80,16 +80,6 @@
 (defun xorshift (n i)
   (logxor n (ash n (- i))))
 
-(declaim (inline hash-integer))
-(-> hash-integer (integer &optional (unsigned-byte 64)) (values (unsigned-byte 64)
-                                                                (unsigned-byte 64)))
-(defun hash-integer (n &optional (multi #x2545F4914F6CDD1D))
-  "Attempts to randomize bits. Uses xorshift* algorithm."
-  (let* ((new-state (~> (xorshift n 12) (xorshift -25) (ldb (byte 64 0) _)
-                        (xorshift 27) (ldb (byte 64 0) _))))
-    (values (ldb (byte 64 0) (* new-state multi))
-            new-state)))
-
 (-> hash-shifts ((unsigned-byte 64)) (unsigned-byte 16))
 (declaim (inline hash-shifts))
 (defun hash-shifts (y)
