@@ -1,6 +1,11 @@
 (cl:in-package #:pantalea.utils.hashing)
 
 
+(declaim (inline xorshift))
+(-> xorshift (integer integer) integer)
+(defun xorshift (n i)
+  (logxor n (ash n (- i))))
+
 (declaim (inline hash-integer))
 (-> hash-integer (integer &optional (unsigned-byte 64)) (values (unsigned-byte 64)
                                                                 (unsigned-byte 64)))
