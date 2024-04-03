@@ -283,17 +283,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
     (schedule-to-event-loop nest
                             (lambda  ()      ; maximum distance first
-                              (let ((connected-peers-sketch (connected-peers-sketch nest))
-                                    (connections-count (connections-count nest))
-                                    (maximum-connections-count (maximum-connections-count nest))
-                                    (new-connections-count (max 0 (- maximum-connections-count connections-count)))
-                                    (responses (~>> (responses message-handler)
-                                                    (mapcar (lambda (data)
-                                                              (let ((distance (bloom:jaccard connected-peers-sketch
-                                                                                             (first data))))
-                                                                (log:debug "Distance to ~a: ~a" (second data) distance)
-                                                                (cons distance (rest data)))))
-                                                    (sort _ #'> :key #'first))))
+                              (let* ((connected-peers-sketch (connected-peers-sketch nest))
+                                     (connections-count (connections-count nest))
+                                     (maximum-connections-count (maximum-connections-count nest))
+                                     (new-connections-count (max 0 (- maximum-connections-count connections-count)))
+                                     (responses (~>> (responses message-handler)
+                                                     (mapcar (lambda (data)
+                                                               (let ((distance (bloom:jaccard connected-peers-sketch
+                                                                                              (first data))))
+                                                                 (log:debug "Distance to ~a: ~a" (second data) distance)
+                                                                 (cons distance (rest data)))))
+                                                     (sort _ #'> :key #'first))))
                                 (log:info "Connecting to discovered peers.")
                                 (iterate
                                   (declare (ignorable key score))
