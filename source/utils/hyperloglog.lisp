@@ -75,11 +75,6 @@
       (finish))
     (finally (return i))))
 
-(declaim (inline xorshift))
-(-> xorshift (integer integer) integer)
-(defun xorshift (n i)
-  (logxor n (ash n (- i))))
-
 (-> hash-shifts ((unsigned-byte 64)) (unsigned-byte 16))
 (declaim (inline hash-shifts))
 (defun hash-shifts (y)

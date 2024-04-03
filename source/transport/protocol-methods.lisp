@@ -282,23 +282,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (message-handler (make 'peer-discovery-handler :id id :nest nest)))
     (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
     (schedule-to-event-loop nest
-                            (lambda (&aux
-                                  (connected-peers-sketch (connected-peers-sketch nest))
-                                  (connections-count (connections-count nest))
-                                  (maximum-connections-count (maximum-connections-count nest))
-                                  (new-connections-count (max 0 (- maximum-connections-count connections-count)))
-                                  (responses (~>> (responses message-handler)
-                                                  (mapcar (lambda (data)
-                                                            (cons (bloom:jaccard connected-peers-sketch
-                                                                               (first data))
-                                                                  (rest data))))
-                                                  (sort _ #'> :key #'first)))) ; maximum distance first
-                              (log:info "Connecting to discovered peers.")
-                              (iterate
-                                (declare (ignorable key score))
-                                (while (<= connected new-connections-count))
-                                (for (score destination key) in responses)
-                                (counting (nth-value 1 (connect nest destination)) into connected))
+                            (lambda  ()      ; maximum distance first
+                              (let ((connected-peers-sketch (connected-peers-sketch nest))
+                                    (connections-count (connections-count nest))
+                                    (maximum-connections-count (maximum-connections-count nest))
+                                    (new-connections-count (max 0 (- maximum-connections-count connections-count)))
+                                    (responses (~>> (responses message-handler)
+                                                    (mapcar (lambda (data)
+                                                              (let ((distance (bloom:jaccard connected-peers-sketch
+                                                                                             (first data))))
+                                                                (log:debug "Distance to ~a: ~a" (second data) distance)
+                                                                (cons distance (rest data)))))
+                                                    (sort _ #'> :key #'first))))
+                                (log:info "Connecting to discovered peers.")
+                                (iterate
+                                  (declare (ignorable key score))
+                                  (while (<= connected new-connections-count))
+                                  (for (score destination key) in responses)
+                                  (counting (nth-value 1 (connect nest destination)) into connected)))
                               (forget-message nest id))
                             #.(* 5 60 1000))
     (spread-message nest public-key message public-key)))
