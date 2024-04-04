@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:send-echo
    #:add-networking
    #:networking-symbol
+   #:open-channel
    #:discover-peers
    #:ping-at
    #:pong-at

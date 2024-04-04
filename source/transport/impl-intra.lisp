@@ -46,6 +46,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :other-nest-key
     :accessor other-nest-key)))
 
+(defmethod print-object ((object destination) stream)
+  (print-unreadable-object (object stream)
+    (format stream "~a" (other-nest-key object))))
+
 (conspack:defencoding destination
   %other-nest-key)
 

@@ -26,12 +26,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass fundamental-network-destination ()
   ())
 
+(defun key-hash (key)
+  (~> key pantalea.utils.hashing:hash-key))
+
+(defun key-equal (a b)
+  (vector= (ironclad:curve25519-key-y a)
+           (ironclad:curve25519-key-y b)))
+
+(cl-custom-hash-table:define-custom-hash-table-constructor make-key-table
+  :test key-equal :hash-function key-hash)
+
 (defclass routing-table ()
   ((%own-routes
     :initarg :own-routes
     :reader own-routes))
   (:default-initargs
-   :own-routes (make-hash-table :test 'equalp)))
+   :own-routes (make-key-table)))
 
 (defclass message-table ()
   ((%active-messages

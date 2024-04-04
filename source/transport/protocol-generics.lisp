@@ -51,3 +51,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric discover-peers (nest))
 (defgeneric networking-symbol (networking))
 (defgeneric add-networking (nest networking))
+(defgeneric open-channel (nest destination service-name))
