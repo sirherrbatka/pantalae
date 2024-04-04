@@ -27,7 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ())
 
 (defun key-hash (key)
-  (~> key pantalea.utils.hashing:hash-key))
+  (~> key pantalea.utils.hashing:hash-key
+      (ldb (byte 0 #.(integer-length most-positive-fixnum)) _)))
 
 (defun key-equal (a b)
   (vector= (ironclad:curve25519-key-y a)
