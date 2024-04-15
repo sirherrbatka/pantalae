@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric networking-of-type (nest type))
 (defgeneric destination-key (connection))
 (defgeneric map-connections (networking function))
+(defgeneric find-route (nest destination))
 (defgeneric insert-direct-route (nest connection))
 (defgeneric clear-dead-route (container dead-route))
 (defgeneric message-active-p (nest message))

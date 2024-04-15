@@ -100,12 +100,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:fullfill!
    #:fullfilledp
    #:find-fullfilled
-   #:eager-promise
+   #:attach!
+   #:*results*
+   #:force-all!
    #:single-promise-success-p
    #:force!
    #:cancel!
    #:promise
-   #:combine
    #:make-promise))
 
 (cl:defpackage #:pantalea.utils.conditions

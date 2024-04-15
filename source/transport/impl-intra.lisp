@@ -104,17 +104,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod p:stop-networking ((nest p:nest) (networking networking))
   (log4cl:log-info "Stopping networking.")
-  (~> networking
-      connections
-      (map 'list (lambda (connection)
-                   (lret ((promise (promise:promise t)))
-                     (q:blocking-queue-push! (incoming-queue connection)
-                                             promise)))
-           _)
-      promise:combine
-      (p:schedule-to-event-loop/no-lock nest _)
-      promise:force!)
-  networking)
+  (let ((promises (map 'list
+                       (lambda (connection)
+                         (lret ((promise (promise:promise t)))
+                           (q:blocking-queue-push! (incoming-queue connection)
+                                                   promise)))
+                       (connections networking))))
+    (map nil (curry #'p:schedule-to-event-loop/no-lock nest) promises)
+    (promise:force-all! promises)
+    networking))
 
 (defmethod p:start-networking ((nest p:nest) (networking networking))
   (log4cl:log-info "Starting networking.")

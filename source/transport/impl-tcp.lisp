@@ -326,16 +326,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod p:stop-networking ((nest p:nest) (networking networking))
   (log4cl:log-info "Stopping sockets.")
   ;; first, let's stop all socket threads Tue Jan  2 15:18:33 2024
-  (~> networking
-      socket-bundles
-      (map 'list (lambda (bundle)
-                   (prog1 (bt2:with-lock-held ((lock bundle))
-                            (setf (terminating bundle) (promise:promise t)))
-                     (ignore-errors (~> bundle thread bt2:join-thread))))
-           _)
-      promise:combine
-      (p:schedule-to-event-loop/no-lock nest _)
-      promise:force!)
+  (let ((promises (map 'list (lambda (bundle)
+                               (prog1 (bt2:with-lock-held ((lock bundle))
+                                        (setf (terminating bundle) (promise:promise t)))
+                                 (ignore-errors (~> bundle thread bt2:join-thread))))
+                       (socket-bundles networking))))
+    (map nil (curry #'p:schedule-to-event-loop/no-lock nest) promises)
+    (promise:force-all! promises))
   (setf (~> networking socket-bundles fill-pointer) 0)
   ;; stop the server thread Tue Jan  2 15:18:50 2024
   (log4cl:log-info "Stopping server.")

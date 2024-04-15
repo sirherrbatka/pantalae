@@ -26,6 +26,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass promise ()
   ())
 
+(defvar *results*)
+
 (defclass single-promise (promise)
   ((%lock
     :initarg :lock
@@ -35,6 +37,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :cvar
     :initform (bt2:make-condition-variable)
     :accessor cvar)
+   (%canceled
+    :initarg :canceld
+    :initform nil
+    :accessor canceled)
    (%callback
     :initarg :callback
     :accessor callback)
@@ -45,17 +51,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :successp
     :reader single-promise-success-p
     :accessor successp)
+   (%hooks
+    :initarg :hooks
+    :accessor hooks)
    (%fullfilled
     :initarg :fullfilled
     :accessor fullfilled)))
-
-(defclass eager-promise (single-promise)
-  ())
-
-(defclass combined-promise (promise)
-  ((%content
-    :initarg :content
-    :accessor content)))
 
 (defgeneric force! (promise &key timeout loop)
   (:method ((promise t) &key timeout loop)
@@ -95,12 +96,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (signal result)
           (return-from force! (values result t))))))
 
-(defmethod force! ((promise combined-promise) &key timeout (loop t))
-  (map 'list
-       (lambda (promise)
-         (force! promise :timeout timeout :loop loop))
-       (content promise)))
-
 (defgeneric fullfilledp (promise)
   (:method ((promise t))
     t))
@@ -109,73 +104,67 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bt2:with-lock-held ((lock promise))
     (fullfilled promise)))
 
-(defmethod fullfilledp ((promise combined-promise))
-  (every #'fullfilledp (content promise)))
-
 (defgeneric fullfill! (promise &key value success))
 
 (defmethod fullfill! ((promise single-promise) &key (value nil value-bound-p) (success t success-bound-p))
-  (bind (((:accessors lock cvar callback result fullfilled successp) promise))
+  (bind (((:accessors lock cvar callback result fullfilled successp hooks) promise))
     (unwind-protect
          (bt2:with-lock-held (lock)
            (unless fullfilled
              (handler-case
-                 (setf fullfilled t
-                       result (if value-bound-p
-                                  (progn (ignore-errors (funcall callback))
-                                         value)
-                                  (funcall callback))
-                       successp (if success-bound-p success t))
+                 (unwind-protect
+                   (setf fullfilled t
+                         result (if value-bound-p
+                                    (progn (ignore-errors (funcall callback))
+                                           value)
+                                    (funcall callback))
+                         successp (if success-bound-p success t))
+                   (map nil (rcurry #'funcall result) hooks) )
                (condition (s)
                  (setf result s)
                  (signal s))))
            result)
       (bt2:condition-notify cvar))))
 
-(defmethod fullfill! ((promise combined-promise) &key (value nil value-bound-p) (success t success-bound-p))
-  (if value-bound-p
-      (if success-bound-p
-          (map nil
-               (lambda (promise)
-                 (fullfill! promise :value value :success success))
-               (content promise))
-          (map nil
-               (lambda (promise)
-                 (fullfill! promise :success success))
-               (content promise)))
-      (if success-bound-p
-          (map nil
-               (lambda (promise)
-                 (fullfill! promise :success success))
-               (content promise))
-          (map nil
-               (lambda (promise)
-                 (fullfill! promise))
-               (content promise)))))
-
 (defgeneric cancel! (promise))
 
 (defmethod cancel! ((promise single-promise))
-  (bind (((:accessors lock cvar result fullfilled) promise))
+  (bind (((:accessors lock cvar result fullfilled canceled) promise))
     (bt2:with-lock-held (lock)
       (unless fullfilled
         (setf result nil
+              canceled t
               fullfilled t)))))
 
-(defun make-promise (callback)
+(defun make-promise (callback &rest hooks)
   (make 'single-promise
         :callback callback
         :result nil
+        :hooks hooks
         :successp nil
         :fullfilled nil))
 
+(defun attach! (promise &rest callbacks)
+  (check-type promise single-promise)
+  (bind (((:accessors lock cvar result fullfilled hooks canceled) promise))
+    (bt2:with-lock-held (lock)
+      (cond (canceled nil)
+            (fullfilled
+             (iterate
+               (for callback in callbacks)
+               (ignore-errors (funcall callback result))))
+            (t (iterate
+                 (for callback in callbacks)
+                 (push callback hooks))))
+      promise)))
+
+(defmacro attach! (promise variable &body hooks)
+  `(hook-in!* ,promise
+    ,@(mapcar (lambda (body) `(lambda (,variable) ,@body))
+              hooks)))
+
 (defmacro promise (&body body)
   `(make-promise (lambda () ,@body)))
-
-(defun combine (promises)
-  (check-type promises sequence)
-  (make 'combined-promise
-        :content promises))
 
 (defun find-fullfilled (promise &rest promises)
   (iterate
@@ -186,9 +175,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (for (values v success) = (force! promise :loop nil :timeout 0.1))
       (when success (return-from find-fullfilled (values v i))))))
 
-(defmacro eager-promise (&body body)
-  `(make 'eager-promise
-    :callback (lambda () ,@body)
-    :result nil
-    :successp nil
-    :fullfilled nil))
+(defun force-all! (promises &key timeout (loop t))
+  (map 'list
+       (lambda (promise)
+         (force! promise :timeout timeout :loop loop))
+       promises))
