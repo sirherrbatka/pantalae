@@ -100,7 +100,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:fullfill!
    #:fullfilledp
    #:find-fullfilled
-   #:attach!
+   #:attach-on-success!
+   #:attach-on-failure!
+   #:canceled
    #:*results*
    #:force-all!
    #:single-promise-success-p
