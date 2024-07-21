@@ -151,12 +151,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           (let ((keys (conspack:decode packet)))
                             (p:set-double-ratchet connection local-client keys))
                           (leave)))
-                      (let ((double-ratchet (p:double-ratchet connection)))
-                        (if (pantalea.cryptography:can-encrypt-p double-ratchet)
-                            (p:send-echo connection)
-                            (bind (((:values type buffer) (read-connection)))
-                              (assert (= type p:+type-echo+))
-                              (p:handle-incoming-packet nest connection type buffer))))
+                      (p:validate-connection-encryption connection #'read-connection)
                       (when promise
                         (p:schedule-to-event-loop nest promise))
                       (iterate

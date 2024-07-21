@@ -31,7 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:usocket  #:alexandria
                 #:ironclad #:cl-conspack
                 #:nibbles  #:local-time
-                #:log4cl   #:cl-custom-hash-table)
+                #:log4cl   #:cl-custom-hash-table
+                #:mockery)
   :components ((:file "aux-package")
                (:module "utils"
                 :components ((:file "packages")

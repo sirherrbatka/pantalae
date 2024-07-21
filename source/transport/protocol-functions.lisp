@@ -81,15 +81,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     payload))
 
 (defun send-echo (connection)
-  (pantalea.transport.protocol:send-packet connection
-                                           pantalea.transport.protocol:+type-echo+
-                                           (encrypt connection (lret ((result (make-array 20 :element-type '(unsigned-byte 8))))
-                                                                 (iterate
-                                                                   (for i from 0 below 20)
-                                                                   (setf (aref result i) 20))))))
+  (lret ((bytes (ironclad:make-random-salt 20)))
+    (pantalea.transport.protocol:send-packet connection
+                                             pantalea.transport.protocol:+type-echo+
+                                             (encrypt connection bytes))))
 
 (defun connections-count (nest)
   (let ((result 0))
     (map-connections nest (lambda (connection) (declare (ignore connection))
                             (incf result)))
     result))
+
+(defun validate-connection-encryption (connection read-connection)
+  (flet ((send-own-random ()
+           (bind ((random-data (send-echo connection))
+                  ((:values type buffer) (funcall read-connection))
+                  (decrypted (decrypt connection buffer)))
+             (assert (= type +type-echo+))
+             (unless (vector= random-data decrypted)
+               (error 'cryptographic-handshake-failed))))
+         (handle-random ()
+           (bind (((:values type buffer) (funcall read-connection))
+                  (decrypted (decrypt connection buffer)))
+             (assert (= type +type-echo+))
+             (pantalea.transport.protocol:send-packet connection
+                                                      pantalea.transport.protocol:+type-echo+
+                                                      (encrypt connection decrypted)))))
+    (if (pantalea.cryptography:can-encrypt-p (double-ratchet connection))
+        (progn (send-own-random) (handle-random))
+        (progn (handle-random) (send-own-random)))
+    (log4cl:log-info "Connection encryption established.")))

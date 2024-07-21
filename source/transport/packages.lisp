@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:+type-pong+
    #:+type-response+
    #:+type-route-discovery+
+   #:+type-cryptographic-handshake+
    #:connect
    #:connected
    #:decrypt
@@ -86,6 +87,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:send-response
    #:set-double-ratchet
    #:spread-message
+   #:validate-connection-encryption
    #:start-nest
    #:start-networking
    #:stop-nest

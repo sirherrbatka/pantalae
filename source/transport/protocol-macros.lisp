@@ -26,3 +26,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmacro with-main-lock-held ((nest) &body body)
   `(bt2:with-lock-held ((main-nest-lock ,nest))
      ,@body))
+
+(defmacro on-event-loop ((nest &optional (time 0)) &body body)
+  `(schedule-to-event-loop ,nest
+    (lambda  () ,@body)
+    ,time))

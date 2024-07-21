@@ -123,18 +123,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                     (stop-networking nest networking))
                   (networking nest))
   ;; finally stop event loop and timing wheel Tue Jan  2 15:19:11 2024
-  (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise
-                                                                     (signal 'pantalea.utils.conditions:stop-thread)))))
+  (ignore-errors (promise:force! (schedule-to-event-loop-impl nest (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))))
   (ignore-errors (promise:force! (tw:add! (timing-wheel nest)
                                           +timing-wheel-tick-duration+
                                           (promise:promise (signal 'pantalea.utils.conditions:stop-thread)))))
   (ignore-errors (bt2:join-thread (event-loop-thread nest)))
   (tw:join-thread! (timing-wheel nest))
   ;; everything should be stopped now, resetting state Tue Jan  2 15:24:41 2024
-  (setf (started nest) nil)
-  (setf (event-loop-queue nest) (q:make-blocking-queue))
-  (setf (event-loop-thread nest) nil)
-  (setf (timing-wheel nest) nil)
+  (setf (started nest) nil
+        (message-table nest) (make 'message-table)
+        (event-loop-queue nest) (q:make-blocking-queue)
+        (event-loop-thread nest) nil
+        (timing-wheel nest) nil)
   (log4cl:log-info "Nest has been stopped.")
   nest)
 
@@ -210,11 +210,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (pantalea.utils.dependency:depend message-handler connection)
       (setf (gethash (id message) (~> nest message-table active-messages)) message-handler))
     (unwind-protect
-         (progn (call-next-method)
-                (schedule-to-event-loop nest
-                                        (let ((id (id message)))
-                                          (lambda () (forget-message nest id)))
-                                        #.(* 10 60 1000))) ; 10 minutes Fri Jan 19 22:05:46 2024
+         (let ((id (id message)))
+           (call-next-method)
+           (on-event-loop (nest #.(* 10 60 1000)) ; 10 minutes Fri Jan 19 22:05:46 2024
+             (forget-message nest id)))
       (bind (((:accessors hop-counter) message))
         (when (<= (incf hop-counter) 8)
           (spread-message nest
@@ -238,7 +237,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ;; connect, maybe? Wed Jan 31 15:01:00 2024
   (log4cl:log-debug "Got peer discovery response!")
   (let ((payload (decrypt-payload nest response)))
-    (push (list (connected-peers payload) (destination payload) (origin-public-key response))
+    (push (list (connected-peers payload)
+                (destination payload)
+                (origin-public-key response))
           (responses handler))))
 
 (defmethod handle-incoming-message ((nest nest)
@@ -281,27 +282,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (id (id message))
          (message-handler (make 'peer-discovery-handler :id id :nest nest)))
     (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
-    (schedule-to-event-loop nest
-                            (lambda  ()      ; maximum distance first
-                              (let* ((connected-peers-sketch (connected-peers-sketch nest))
-                                     (connections-count (connections-count nest))
-                                     (maximum-connections-count (maximum-connections-count nest))
-                                     (new-connections-count (max 0 (- maximum-connections-count connections-count)))
-                                     (responses (~>> (responses message-handler)
-                                                     (mapcar (lambda (data)
-                                                               (let ((distance (bloom:jaccard connected-peers-sketch
-                                                                                              (first data))))
-                                                                 (log:debug "Distance to ~a: ~a" (second data) distance)
-                                                                 (cons distance (rest data)))))
-                                                     (sort _ #'> :key #'first))))
-                                (log:info "Connecting to discovered peers.")
-                                (iterate
-                                  (declare (ignorable key score))
-                                  (while (<= connected new-connections-count))
-                                  (for (score destination key) in responses)
-                                  (counting (nth-value 1 (connect nest destination)) into connected)))
-                              (forget-message nest id))
-                            #.(* 5 60 1000))
+    (on-event-loop (nest #.(* 5 60 1000))
+      (let* ((connected-peers-sketch (connected-peers-sketch nest))
+             (connections-count (connections-count nest))
+             (maximum-connections-count (maximum-connections-count nest))
+             (new-connections-count (max 0 (- maximum-connections-count connections-count)))
+             (responses (~>> (responses message-handler) ; maximum distance first
+                             (mapcar (lambda (data)
+                                       (let ((distance (bloom:jaccard connected-peers-sketch
+                                                                      (first data))))
+                                         (log:debug "Distance to ~a: ~a" (second data) distance)
+                                         (cons distance (rest data)))))
+                             (sort _ #'> :key #'first))))
+        (log:info "Connecting to discovered peers.")
+        (iterate
+          (declare (ignorable key score))
+          (while (<= connected new-connections-count))
+          (for (score destination key) in responses)
+          (counting (nth-value 1 (connect nest destination)) into connected)))
+      (forget-message nest id))
     (spread-message nest public-key message public-key)))
 
 (defmethod destination-public-key ((connection fundamental-connection))
