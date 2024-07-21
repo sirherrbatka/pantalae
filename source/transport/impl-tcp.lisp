@@ -218,7 +218,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                         :element-type '(unsigned-byte 8)
                                                         :timeout +tcp-timeout+)))
     (error (e)
-      (promise:fullfill! on-fail :value e :success nil)
+      (log4cl:log-error "Can't connect because ~a" e)
+      (promise:fullfill! on-fail)
       (p:schedule-to-event-loop nest (promise:promise (p:failed-to-connect nest destination e)))
       (error e)))
   (bind ((local-client (p:make-double-ratchet-local-client nest))
@@ -247,7 +248,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (handler-case
              (let ((keys-timeout (p:schedule-to-event-loop nest
                                                            (promise:promise (p:disconnect nest bundle))
-                                                           30000)))
+                                                            30000)))
                (p:send-keys bundle local-client)
                (iterate
                  (for (values type buffer) = (read-socket))
@@ -262,11 +263,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (iterate
                  (for (values type buffer) = (read-socket))
                  (p:schedule-to-event-loop nest
-                                           (curry #'p:handle-incoming-packet
-                                                  nest
-                                                  bundle
-                                                  type
-                                                  buffer))))
+                                            (curry #'p:handle-incoming-packet
+                                                   nest
+                                                   bundle
+                                                   type
+                                                   buffer))))
            (error (er)
              (log4cl:log-info "~a" er)
              (setf e er)))

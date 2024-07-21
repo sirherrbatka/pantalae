@@ -155,17 +155,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                               (p:set-double-ratchet connection local-client keys))
                             (leave)))
                         (p:validate-connection-encryption connection #'read-connection)
-                        (promise:cancel! keys-timeout)
-                        (when promise
-                          (p:schedule-to-event-loop nest promise))
-                        (iterate
-                          (for (values type packet) = (read-connection))
-                          (p:schedule-to-event-loop nest
-                                                    (curry #'p:handle-incoming-packet
-                                                           nest
-                                                           connection
-                                                           type
-                                                           packet)))))
+                        (promise:cancel! keys-timeout))
+                      (when promise
+                        (p:schedule-to-event-loop nest promise))
+                      (iterate
+                        (for (values type packet) = (read-connection))
+                        (p:schedule-to-event-loop nest
+                                                  (curry #'p:handle-incoming-packet
+                                                         nest
+                                                         connection
+                                                         type
+                                                         packet))))
                   (error (e) (log:info "~a" e)))
              (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
              (handler-case (p:schedule-to-event-loop nest (curry #'p:disconnected nest connection nil))
