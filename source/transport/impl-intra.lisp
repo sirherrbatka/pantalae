@@ -142,26 +142,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                       (error "Ending thread!"))))))
                       (log4cl:log-info "Starting connection thread.")
                       (q:blocking-queue-push! outgoing-queue (find-destination-key nest))
-                      (p:send-keys connection local-client)
-                      (setf (p:destination connection) (q:blocking-queue-pop! incoming-queue))
-                      (iterate
-                        (for (values type packet) = (read-connection))
-                        (when (= type p:+type-keys+)
-                          (log4cl:log-debug "Got keys, decoding…")
-                          (let ((keys (conspack:decode packet)))
-                            (p:set-double-ratchet connection local-client keys))
-                          (leave)))
-                      (p:validate-connection-encryption connection #'read-connection)
-                      (when promise
-                        (p:schedule-to-event-loop nest promise))
-                      (iterate
-                        (for (values type packet) = (read-connection))
-                        (p:schedule-to-event-loop nest
-                                                   (curry #'p:handle-incoming-packet
-                                                          nest
-                                                          connection
-                                                          type
-                                                          packet))))
+                      (let ((keys-timeout (p:schedule-to-event-loop (promise:promise (p:disconnect nest connection))
+                                                                    30000)))
+                        (p:send-keys connection local-client)
+                        (setf (p:destination connection) (q:blocking-queue-pop! incoming-queue))
+                        (iterate
+                          (for (values type packet) = (read-connection))
+                          (when (= type p:+type-keys+)
+                            (log4cl:log-debug "Got keys, decoding…")
+                            (let ((keys (conspack:decode packet)))
+                              (p:set-double-ratchet connection local-client keys))
+                            (leave)))
+                        (p:validate-connection-encryption connection #'read-connection)
+                        (promise:cancel! keys-timeout)
+                        (when promise
+                          (p:schedule-to-event-loop nest promise))
+                        (iterate
+                          (for (values type packet) = (read-connection))
+                          (p:schedule-to-event-loop nest
+                                                    (curry #'p:handle-incoming-packet
+                                                           nest
+                                                           connection
+                                                           type
+                                                           packet)))))
                   (error (e) (log:info "~a" e)))
              (~> connection outgoing-queue (q:blocking-queue-push! (promise:promise nil)))
              (handler-case (p:schedule-to-event-loop nest (curry #'p:disconnected nest connection nil))
