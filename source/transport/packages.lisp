@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:+type-pong+
    #:+type-response+
    #:+type-route-discovery+
-   #:+type-cryptographic-handshake+
    #:connect
    #:connected
    #:decrypt
