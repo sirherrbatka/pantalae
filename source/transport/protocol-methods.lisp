@@ -361,7 +361,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (encrypt-in-place (~> (apply #'make-instance payload-class keys)
                               (conspack:encode)
                               (dr:pkcs7-pad)))
-        (apply #'make 'response
-               :id (id message)
-               :encrypted-payload _
-               (envelop-initargs (origin message this-key) this-key)))))
+        (make 'payload-response :id (id message) :encrypted-payload _))))
+
+(defmethod make-response ((message route-discovery-request) this-key payload-class &rest keys)
+  (declare (ignore payload-class))
+  (apply #'make 'route-discovery-payload
+         :id (id message)
+         (append keys
+                 (envelop-initargs (envelop-origin message this-key) this-key))))

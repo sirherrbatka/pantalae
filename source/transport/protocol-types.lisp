@@ -171,9 +171,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor hop-counter)
    (%id
     :initarg :id
-    :reader id))
+    :reader id)
+   (%destination
+    :initarg :destination
+    :accessor destination))
   (:default-initargs
    :hop-counter 0
+   :destination nil
    :id (random most-positive-fixnum)))
 
 (defclass envelop ()
@@ -200,11 +204,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass route-discovery-request (envelop message)
   ())
 
-(defclass response (envelop)
+(defclass fundamental-response ()
   ((%id
     :initarg :id
-    :reader id)
-   (%encrypted-payload
+    :reader id)))
+
+(defclass payload-response (fundamental-response)
+  ((%encrypted-payload
     :initarg :encrypted-payload
     :reader encrypted-payload)))
 
@@ -219,7 +225,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :connected-peers
     :reader connected-peers)))
 
-(defclass route-discovery-payload (response-payload)
+(defclass route-discovery-response (envelop fundamental-response)
   ())
 
 (defclass fundamental-payload ()

@@ -23,8 +23,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.transport.protocol)
 
 
-(conspack:defencoding response
-  %id %encrypted-payload)
+(conspack:defencoding payload-response
+  %encrypted-payload)
 
 (conspack:defencoding response-payload
   )
@@ -43,3 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (conspack:defencoding fundamental-network-destination
   )
+
+(conspack:defencoding fundamental-response
+  %id)
