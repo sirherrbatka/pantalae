@@ -365,7 +365,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod make-response ((message route-discovery-request) this-key payload-class &rest keys)
   (declare (ignore payload-class))
-  (apply #'make 'route-discovery-payload
+  (apply #'make 'route-discovery-response
          :id (id message)
-         (append keys
-                 (envelop-initargs (envelop-origin message this-key) this-key))))
+         (~> (envelop-origin message this-key)
+             (envelop-initargs this-key)
+             (append keys _))))
