@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:pkcs7-pad
    #:pkcs7-unpad
    #:long-term-identity-remote-key
+   #:make-padded-vector-for-length
    #:long-term-identity-key
    #:private
    #:public

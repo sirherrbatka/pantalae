@@ -67,16 +67,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (ironclad:decrypt-in-place cipher buffer)
   buffer)
 
-(defun make-response (this-key message payload-class &rest keys)
-  (~> message origin-public-key
-      (ironclad:diffie-hellman (dr:private this-key) _)
-      (ironclad:make-cipher :blowfish :mode :ecb :key _)
-      (encrypt-in-place (dr:pkcs7-pad (conspack:encode (apply #'make-instance payload-class
-                                                              keys))))
-      (make 'response :id (id message) :encrypted-payload _ :origin-public-key (dr:public this-key))))
-
 (defun connected-peers-sketch (nest)
   (lret ((sketch (bloom:make-sketch)))
     (map-connections nest
                      (lambda (connection)
                        (bloom:add-key! sketch (destination-key connection))))))
+
+(defun envelop-initargs (destination-public-key this-key)
+  (bind ((this-public-key (dr:public this-key))
+         (x (ironclad:random-data 32))
+         (y (ironclad:curve25519-key-y this-public-key))
+         (ephemeral-key (ironclad:make-private-key :curve25519 :x x))
+         (nonce (ironclad:random-data 32))
+         (plaintext (lret ((result (~> (+ (length y) (length nonce))
+                                       dr:make-padded-vector-for-length)))
+                      (iterate
+                        (for i from 0 below (length nonce))
+                        (setf (aref result i) (aref nonce i)))
+                      (iterate
+                        (for i from (length nonce))
+                        (repeat (length y))
+                        (setf (aref result i) (aref y i))))))
+    (assert destination-public-key)
+    (list
+     :nonce nonce
+     :ephemeral-key ephemeral-key
+     :encrypted (~> (ironclad:diffie-hellman ephemeral-key destination-public-key)
+                    (ironclad:make-cipher :blowfish :mode :ecb :key _)
+                    (ironclad:encrypt-in-place plaintext)))))

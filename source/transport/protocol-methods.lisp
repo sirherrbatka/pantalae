@@ -20,7 +20,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-(cl:in-package #:pantalea.transport.protocol)
+(cl:in-package :pantalea.transport.protocol)
 
 
 (defmethod start-nest :around ((nest nest))
@@ -247,8 +247,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                     (message peer-discovery-request))
   (log4cl:log-debug "Got peer discovery request!")
   (when (< (connections-count nest) (maximum-connections-count nest))
-    (~> (make-response (long-term-identity-key nest)
-                       message 'peer-discovery-payload
+    (~> (make-response message
+                       (long-term-identity-key nest)
+                       'peer-discovery-payload
                        :connected-peers (connected-peers-sketch nest)
                        :destination (destination message))
         (send-response nest connection message _))))
@@ -316,3 +317,51 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (error 'networking-already-present))
     (setf (gethash (networking-symbol networking) (networking nest)) networking))
   nest)
+
+(defmethod open-channel ((nest nest) destination service-name)
+  (bind ((route-discovery-message (make-handshake-message destination))
+         (route-discovery-handler (make 'route-discovery-handler)))
+    ))
+
+(defmethod envelop-origin ((envelop envelop) this-key)
+  (ignore-errors
+   (bind ((nonce (nonce envelop))
+          (ephemeral-key (ephemeral-key envelop))
+          (encrypted (encrypted envelop))
+          (decrypted (lret ((plaintext (make-array (~> encrypted length dr:make-padded-vector-for-length)
+                                                   :element-type '(unsigned-byte 8))))
+                       (~> (dr:private this-key)
+                           (ironclad:diffie-hellman ephemeral-key)
+                           (ironclad:make-cipher :blowfish :mode
+                                                 :ecb :key _)
+                           (ironclad:decrypt encrypted plaintext)
+                           dr:pkcs7-unpad))))
+     (if (> (length decrypted) (length nonce))
+         (iterate
+           (for i from 0 below (length nonce))
+           (always (= (aref nonce i) (aref decrypted i)))
+           (finally (return (~>> nonce
+                                 length
+                                 (subseq decrypted)
+                                 (ironclad:make-public-key :curve25519 :y _)))))
+         nil))))
+
+(defmethod origin ((message enveloped-message) key)
+  (envelop-origin message key))
+
+(defmethod origin ((message public-request) key)
+  (origin-public-key message))
+
+(defmethod make-response ((message message) this-key payload-class &rest keys)
+  (bind ((this-private-key (dr:private this-key))
+         (destination-public-key (origin message this-key)))
+    (assert destination-public-key)
+    (~> (ironclad:diffie-hellman this-private-key destination-public-key)
+        (ironclad:make-cipher :blowfish :mode :ecb :key _)
+        (encrypt-in-place (~> (apply #'make-instance payload-class keys)
+                              (conspack:encode)
+                              (dr:pkcs7-pad)))
+        (apply #'make 'response
+               :id (id message)
+               :encrypted-payload _
+               (envelop-initargs (origin message this-key) this-key)))))

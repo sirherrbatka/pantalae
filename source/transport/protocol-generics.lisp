@@ -53,3 +53,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric networking-symbol (networking))
 (defgeneric add-networking (nest networking))
 (defgeneric open-channel (nest destination service-name))
+(defgeneric envelop-origin (envelop key))
+(defgeneric make-response (message this-key payload-class &rest keys))
+(defgeneric origin (message key))

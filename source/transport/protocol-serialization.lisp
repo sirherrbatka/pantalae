@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (conspack:defencoding response
-  %id %encrypted-payload %origin-public-key)
+  %id %encrypted-payload)
 
 (conspack:defencoding response-payload
   )
@@ -32,8 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (conspack:defencoding peer-discovery-payload
   %destination %connected-peers)
 
+(conspack:defencoding envelop
+  %ephemeral-key %nonce %encrypted)
+
 (conspack:defencoding message
   %hop-counter %origin-public-key %id %destination)
+
+(conspack:defencoding public-request
+  %origin-public-key)
 
 (conspack:defencoding fundamental-network-destination
   )

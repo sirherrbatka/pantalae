@@ -171,28 +171,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor hop-counter)
    (%id
     :initarg :id
-    :reader id)
-   (%origin-public-key
-    :initarg :origin-public-key
-    :reader origin-public-key)
-   (%destination
-    :initarg :destination
-    :accessor destination))
+    :reader id))
   (:default-initargs
    :hop-counter 0
-   :destination nil
    :id (random most-positive-fixnum)))
 
-(defclass peer-discovery-request (message)
+(defclass envelop ()
+  ((%ephemeral-key
+    :initarg :ephemeral-key
+    :reader ephemeral-key)
+   (%nonce
+    :initarg :nonce
+    :accessor nonce)
+   (%encrypted
+    :initarg :encrypted
+    :accessor encrypted)))
+
+(defclass enveloped-message (envelop message)
   ())
 
-(defclass response ()
+(defclass public-request (message)
+  ((%origin-public-key :initarg :origin-public-key
+                       :reader origin-public-key)))
+
+(defclass peer-discovery-request (public-request)
+  ())
+
+(defclass route-discovery-request (envelop message)
+  ())
+
+(defclass response (envelop)
   ((%id
     :initarg :id
     :reader id)
-   (%origin-public-key
-    :initarg :origin-public-key
-    :reader origin-public-key)
    (%encrypted-payload
     :initarg :encrypted-payload
     :reader encrypted-payload)))

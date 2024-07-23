@@ -88,7 +88,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defun connections-count (nest)
   (let ((result 0))
-    (map-connections nest (lambda (connection) (declare (ignore connection))
+    (map-connections nest (lambda (connection)
+                            (declare (ignore connection))
                             (incf result)))
     result))
 
