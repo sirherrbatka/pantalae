@@ -238,8 +238,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (log4cl:log-debug "Got peer discovery response!")
   (let ((payload (decrypt-payload nest response)))
     (push (list (connected-peers payload)
-                (destination payload)
-                (origin-public-key response))
+                (destination response)
+                (origin-public-key response (long-term-identity-key nest)))
           (responses handler))))
 
 (defmethod handle-incoming-message ((nest nest)
@@ -250,11 +250,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (~> (make-response message
                        (long-term-identity-key nest)
                        'peer-discovery-payload
-                       :connected-peers (connected-peers-sketch nest)
-                       :destination (destination message))
+                       :connected-peers (connected-peers-sketch nest))
         (send-response nest connection message _))))
 
 (defmethod send-response ((nest nest) connection message response)
+  (setf (destination response) (destination connection))
   (~>> response conspack:encode
        (send-packet connection +type-response+)))
 
@@ -328,14 +328,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (bind ((nonce (nonce envelop))
           (ephemeral-key (ephemeral-key envelop))
           (encrypted (encrypted envelop))
-          (decrypted (lret ((plaintext (make-array (~> encrypted length dr:make-padded-vector-for-length)
+          (decrypted (let ((plaintext (make-array (~> encrypted length)
                                                    :element-type '(unsigned-byte 8))))
                        (~> (dr:private this-key)
                            (ironclad:diffie-hellman ephemeral-key)
                            (ironclad:make-cipher :blowfish :mode
                                                  :ecb :key _)
-                           (ironclad:decrypt encrypted plaintext)
-                           dr:pkcs7-unpad))))
+                           (ironclad:decrypt encrypted plaintext))
+                       (dr:pkcs7-unpad plaintext))))
      (if (> (length decrypted) (length nonce))
          (iterate
            (for i from 0 below (length nonce))
@@ -346,27 +346,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                  (ironclad:make-public-key :curve25519 :y _)))))
          nil))))
 
-(defmethod origin ((message enveloped-message) key)
+(defmethod origin-public-key ((message envelop) key)
   (envelop-origin message key))
 
-(defmethod origin ((message public-request) key)
-  (origin-public-key message))
+(defmethod origin-public-key ((message public-request) key)
+  (read-origin-public-key message))
 
 (defmethod make-response ((message message) this-key payload-class &rest keys)
   (bind ((this-private-key (dr:private this-key))
-         (destination-public-key (origin message this-key)))
+         (destination-public-key (origin-public-key message this-key)))
     (assert destination-public-key)
     (~> (ironclad:diffie-hellman this-private-key destination-public-key)
         (ironclad:make-cipher :blowfish :mode :ecb :key _)
         (encrypt-in-place (~> (apply #'make-instance payload-class keys)
                               (conspack:encode)
                               (dr:pkcs7-pad)))
-        (make 'payload-response :id (id message) :encrypted-payload _))))
+        (apply #'make 'payload-response
+               :id (id message)
+               :encrypted-payload _
+               (~> (origin-public-key message this-key)
+                   (envelop-initargs this-key))))))
 
-(defmethod make-response ((message route-discovery-request) this-key payload-class &rest keys)
-  (declare (ignore payload-class))
-  (apply #'make 'route-discovery-response
-         :id (id message)
-         (~> (envelop-origin message this-key)
-             (envelop-initargs this-key)
-             (append keys _))))
+(defmethod make-response ((message peer-discovery-request) this-key payload-class &rest keys)
+  (declare (ignore payload-class keys))
+  (call-next-method))

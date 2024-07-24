@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                        (bloom:add-key! sketch (destination-key connection))))))
 
 (defun envelop-initargs (destination-public-key this-key)
+  (assert destination-public-key)
   (bind ((this-public-key (dr:public this-key))
          (x (ironclad:random-data 32))
          (y (ironclad:curve25519-key-y this-public-key))
@@ -86,12 +87,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         (setf (aref result i) (aref nonce i)))
                       (iterate
                         (for i from (length nonce))
-                        (repeat (length y))
-                        (setf (aref result i) (aref y i))))))
-    (assert destination-public-key)
+                        (for ii from 0 below (length y))
+                        (setf (aref result i) (aref y ii))))))
     (list
      :nonce nonce
-     :ephemeral-key ephemeral-key
-     :encrypted (~> (ironclad:diffie-hellman ephemeral-key destination-public-key)
-                    (ironclad:make-cipher :blowfish :mode :ecb :key _)
-                    (ironclad:encrypt-in-place plaintext)))))
+     :ephemeral-key (ironclad:make-public-key :curve25519
+                                              :y (ironclad:curve25519-key-y ephemeral-key))
+     :encrypted (progn (~> (ironclad:diffie-hellman ephemeral-key destination-public-key)
+                           (ironclad:make-cipher :blowfish :mode :ecb :key _)
+                           (ironclad:encrypt-in-place plaintext))
+                       plaintext))))

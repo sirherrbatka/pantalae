@@ -196,7 +196,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defclass public-request (message)
   ((%origin-public-key :initarg :origin-public-key
-                       :reader origin-public-key)))
+                       :reader read-origin-public-key)))
 
 (defclass peer-discovery-request (public-request)
   ())
@@ -207,9 +207,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass fundamental-response ()
   ((%id
     :initarg :id
-    :reader id)))
+    :reader id)
+   (%destination
+    :initarg :destination
+    :accessor destination))
+  (:default-initargs :destination nil))
 
-(defclass payload-response (fundamental-response)
+(defclass payload-response (envelop fundamental-response)
   ((%encrypted-payload
     :initarg :encrypted-payload
     :reader encrypted-payload)))
@@ -218,14 +222,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ())
 
 (defclass peer-discovery-payload (response-payload)
-  ((%destination
-    :initarg :destination
-    :reader destination)
-   (%connected-peers
+  ((%connected-peers
     :initarg :connected-peers
     :reader connected-peers)))
 
-(defclass route-discovery-response (envelop fundamental-response)
+(defclass route-discovery-response (fundamental-response)
   ())
 
 (defclass fundamental-payload ()

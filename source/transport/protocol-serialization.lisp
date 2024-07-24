@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   )
 
 (conspack:defencoding peer-discovery-payload
-  %destination %connected-peers)
+  %connected-peers)
 
 (conspack:defencoding envelop
   %ephemeral-key %nonce %encrypted)
@@ -45,4 +45,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   )
 
 (conspack:defencoding fundamental-response
-  %id)
+  %id %destination)

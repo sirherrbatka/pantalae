@@ -54,6 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "methods")))
                (:module "transport"
                 :components ((:file "packages")
+                             (:file "protocol-macros")
                              (:file "protocol-conditions")
                              (:file "protocol-variables")
                              (:file "protocol-generics")
@@ -62,7 +63,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                              (:file "protocol-serialization")
                              (:file "protocol-methods")
                              (:file "protocol-functions")
-                             (:file "protocol-macros")
                              (:file "impl-intra")
-                             (:file "impl-tcp")))
-               ))
+                             (:file "impl-tcp")))))
