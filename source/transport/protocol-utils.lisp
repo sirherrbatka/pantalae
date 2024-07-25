@@ -89,11 +89,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         (for i from (length nonce))
                         (for ii from 0 below (length y))
                         (setf (aref result i) (aref y ii))))))
+    (~> (ironclad:diffie-hellman ephemeral-key destination-public-key)
+        (ironclad:make-cipher :blowfish :mode :ecb :key _)
+        (ironclad:encrypt-in-place plaintext))
     (list
      :nonce nonce
      :ephemeral-key (ironclad:make-public-key :curve25519
                                               :y (ironclad:curve25519-key-y ephemeral-key))
-     :encrypted (progn (~> (ironclad:diffie-hellman ephemeral-key destination-public-key)
-                           (ironclad:make-cipher :blowfish :mode :ecb :key _)
-                           (ironclad:encrypt-in-place plaintext))
-                       plaintext))))
+     :encrypted plaintext)))
+
+(defun shroud-initargs (destination-public-key this-key)
+  (assert destination-public-key)
+  (bind ((this-private-key (dr:private this-key))
+         (plaintext (ironclad:random-data 32))
+         (ciphertext (copy-array plaintext)))
+    (~> (ironclad:diffie-hellman this-private-key destination-public-key)
+        (ironclad:make-cipher :blowfish :mode :ecb :key _)
+        (ironclad:encrypt-in-place ciphertext))
+    (list
+     :nonce plaintext
+     :encrypted ciphertext)))
+
+(defun envelop-origin (envelop this-key)
+  (ignore-errors
+   (bind ((nonce (nonce envelop))
+          (ephemeral-key (ephemeral-key envelop))
+          (encrypted (encrypted envelop))
+          (decrypted (let ((plaintext (make-array (~> encrypted length)
+                                                  :element-type '(unsigned-byte 8))))
+                       (~> (dr:private this-key)
+                           (ironclad:diffie-hellman ephemeral-key)
+                           (ironclad:make-cipher :blowfish :mode
+                                                 :ecb :key _)
+                           (ironclad:decrypt encrypted plaintext))
+                       (dr:pkcs7-unpad plaintext))))
+     (if (> (length decrypted) (length nonce))
+         (iterate
+           (for i from 0 below (length nonce))
+           (always (= (aref nonce i) (aref decrypted i)))
+           (finally (return (~>> nonce
+                                 length
+                                 (subseq decrypted)
+                                 (ironclad:make-public-key :curve25519 :y _)))))
+         nil))))
+
+(defun validate-shroud (key shroud)
+  ;; TODO
+  nil)

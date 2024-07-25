@@ -186,7 +186,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    packet)
   (log4cl:log-debug "Got response packet!")
   (bind ((response (~>> packet conspack:decode))
-         (handler (gethash (id response) (~>> nest message-table active-messages))))
+         (handler (gethash (id response) (~> nest message-table active-messages))))
     (unless (null handler)
       (handle-incoming-response nest handler response packet connection))))
 
@@ -201,19 +201,47 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (not (null (gethash (id message)
                       (~> nest message-table active-messages)))))
 
+(defmethod handle-incoming-message ((nest nest) connection (message route-discovery-request))
+  ;; TODO save message id as route during establishing, also build a foreign-route-discovery-handler
+  )
+
+(defmethod make-message-handler :around ((nest nest) message connection)
+  (lret ((result (call-next-method)))
+    (pantalea.utils.dependency:depend result connection)))
+
+(defmethod make-message-handler ((nest nest) (message peer-discovery-request) connection)
+  )
+
+(defmethod make-message-handler ((nest nest) message connection)
+  (make 'message-handler
+        :id (id message)
+        :nest nest
+        :connection connection))
+
+(defmethod make-message-handler ((nest nest) (message route-discovery-request) connection)
+  ;; TODO implement
+  )
+
+(defmethod get-message-handler ((nest nest) id)
+  (gethash id (~> nest message-table active-messages)))
+
+(defmethod insert-message-handler ((nest nest) handler &optional (timeout #.(* 10 60 1000)) on-timeout-reached)
+  (setf (gethash (id handler) (~> nest message-table active-messages)) handler)
+  (let ((id (id handler)))
+    (on-event-loop (nest timeout)  ; 10 minutes Fri Jan 19 22:05:46 2024
+      (unwind-protect
+           (when on-timeout-reached
+             (when-let ((handler (get-message-handler nest (id handler))))
+               (funcall on-timeout-reached handler)))
+        (forget-message nest id)))))
+
 (defmethod handle-incoming-message :around ((nest nest) connection (message message))
   (unless (message-active-p nest message)
-    (let ((message-handler (make 'message-handler
-                                 :id (id message)
-                                 :nest nest
-                                 :connection connection)))
-      (pantalea.utils.dependency:depend message-handler connection)
-      (setf (gethash (id message) (~> nest message-table active-messages)) message-handler))
     (unwind-protect
-         (let ((id (id message)))
-           (call-next-method)
-           (on-event-loop (nest #.(* 10 60 1000)) ; 10 minutes Fri Jan 19 22:05:46 2024
-             (forget-message nest id)))
+         (progn
+           (~> (make-message-handler nest message connection)
+               (insert-message-handler nest _ #.(* 10 60 1000)))
+           (call-next-method))
       (bind (((:accessors hop-counter) message))
         (when (<= (incf hop-counter) 8)
           (spread-message nest
@@ -228,6 +256,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                      connection)
   ;; should forward message to the origin Wed Jan 31 14:52:29 2024
   (send-packet (connection handler) +type-response+ packet))
+
+(defmethod handle-incoming-response ((nest nest)
+                                     (handler route-discovery-handler)
+                                     response
+                                     packet
+                                     connection)
+  ;; TODO implement
+  )
+
+(defmethod handle-incoming-response ((nest nest)
+                                     (handler foreign-route-discovery-handler)
+                                     response
+                                     packet
+                                     connection)
+  ;; TODO implement
+  )
 
 (defmethod handle-incoming-response ((nest nest)
                                      (handler peer-discovery-handler)
@@ -247,11 +291,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                     (message peer-discovery-request))
   (log4cl:log-debug "Got peer discovery request!")
   (when (< (connections-count nest) (maximum-connections-count nest))
-    (~> (make-response message
-                       (long-term-identity-key nest)
-                       'peer-discovery-payload
-                       :connected-peers (connected-peers-sketch nest))
-        (send-response nest connection message _))))
+    (~>> (make-payload-response message
+                               (long-term-identity-key nest)
+                               'peer-discovery-payload
+                               :connected-peers (connected-peers-sketch nest))
+         (send-response nest connection message))))
 
 (defmethod send-response ((nest nest) connection message response)
   (setf (destination response) (destination connection))
@@ -259,7 +303,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
        (send-packet connection +type-response+)))
 
 (defmethod forget-message ((nest nest) id)
-  (remhash id (~> nest message-table active-messages))
+  (when (remhash id (~> nest message-table active-messages))
+    (pantalea.utils.dependency:kill (~> nest message-table active-messages)))
   nil)
 
 (defmethod map-connections ((networking nest) function)
@@ -268,7 +313,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   nil)
 
 (defmethod pantalea.utils.dependency:kill ((cell message-handler))
-  (forget-message (read-nest cell) (id cell))
+  (remhash (id cell) (read-nest cell))
   (call-next-method))
 
 (defmethod send-message ((nest nest) connection message)
@@ -282,26 +327,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (message (make 'peer-discovery-request :origin-public-key public-key))
          (id (id message))
          (message-handler (make 'peer-discovery-handler :id id :nest nest)))
-    (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
-    (on-event-loop (nest #.(* 5 60 1000))
-      (let* ((connected-peers-sketch (connected-peers-sketch nest))
-             (connections-count (connections-count nest))
-             (maximum-connections-count (maximum-connections-count nest))
-             (new-connections-count (max 0 (- maximum-connections-count connections-count)))
-             (responses (~>> (responses message-handler) ; maximum distance first
-                             (mapcar (lambda (data)
-                                       (let ((distance (bloom:jaccard connected-peers-sketch
-                                                                      (first data))))
-                                         (log:debug "Distance to ~a: ~a" (second data) distance)
-                                         (cons distance (rest data)))))
-                             (sort _ #'> :key #'first))))
-        (log:info "Connecting to discovered peers.")
-        (iterate
-          (declare (ignorable key score))
-          (while (<= connected new-connections-count))
-          (for (score destination key) in responses)
-          (counting (nth-value 1 (connect nest destination)) into connected)))
-      (forget-message nest id))
+    (insert-message-handler nest message-handler #.(* 5 60 1000)
+                            (lambda (message-handler)
+                              (let* ((connected-peers-sketch (connected-peers-sketch nest))
+                                     (connections-count (connections-count nest))
+                                     (maximum-connections-count (maximum-connections-count nest))
+                                     (new-connections-count (max 0 (- maximum-connections-count connections-count)))
+                                     (responses (~>> (responses message-handler) ; maximum distance first
+                                                     (mapcar (lambda (data)
+                                                               (let ((distance (bloom:jaccard connected-peers-sketch
+                                                                                              (first data))))
+                                                                 (log:debug "Distance to ~a: ~a" (second data) distance)
+                                                                 (cons distance (rest data)))))
+                                                     (sort _ #'> :key #'first))))
+                                (log:info "Connecting to discovered peers.")
+                                (iterate
+                                  (declare (ignorable key score))
+                                  (while (<= connected new-connections-count))
+                                  (for (score destination key) in responses)
+                                  (counting (nth-value 1 (connect nest destination)) into connected)))))
     (spread-message nest public-key message public-key)))
 
 (defmethod destination-public-key ((connection fundamental-connection))
@@ -318,41 +362,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (gethash (networking-symbol networking) (networking nest)) networking))
   nest)
 
-(defmethod open-channel ((nest nest) destination service-name)
-  (bind ((route-discovery-message (make-handshake-message destination))
-         (route-discovery-handler (make 'route-discovery-handler)))
-    ))
-
-(defmethod envelop-origin ((envelop envelop) this-key)
-  (ignore-errors
-   (bind ((nonce (nonce envelop))
-          (ephemeral-key (ephemeral-key envelop))
-          (encrypted (encrypted envelop))
-          (decrypted (let ((plaintext (make-array (~> encrypted length)
-                                                   :element-type '(unsigned-byte 8))))
-                       (~> (dr:private this-key)
-                           (ironclad:diffie-hellman ephemeral-key)
-                           (ironclad:make-cipher :blowfish :mode
-                                                 :ecb :key _)
-                           (ironclad:decrypt encrypted plaintext))
-                       (dr:pkcs7-unpad plaintext))))
-     (if (> (length decrypted) (length nonce))
-         (iterate
-           (for i from 0 below (length nonce))
-           (always (= (aref nonce i) (aref decrypted i)))
-           (finally (return (~>> nonce
-                                 length
-                                 (subseq decrypted)
-                                 (ironclad:make-public-key :curve25519 :y _)))))
-         nil))))
-
 (defmethod origin-public-key ((message envelop) key)
   (envelop-origin message key))
 
 (defmethod origin-public-key ((message public-request) key)
   (read-origin-public-key message))
 
-(defmethod make-response ((message message) this-key payload-class &rest keys)
+(defmethod make-payload-response ((message message) this-key payload-class &rest keys)
   (bind ((this-private-key (dr:private this-key))
          (destination-public-key (origin-public-key message this-key)))
     (assert destination-public-key)
@@ -364,9 +380,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (apply #'make 'payload-response
                :id (id message)
                :encrypted-payload _
-               (~> (origin-public-key message this-key)
-                   (envelop-initargs this-key))))))
+               (envelop-initargs destination-public-key this-key)))))
 
-(defmethod make-response ((message peer-discovery-request) this-key payload-class &rest keys)
-  (declare (ignore payload-class keys))
+(defmethod discover-route ((nest nest) destination-public-key)
+  (let* ((public-key (~> nest long-term-identity-key pantalea.cryptography:public))
+         (message (apply #'make 'route-discovery-request
+                         (envelop-initargs destination-public-key
+                                           public-key)))
+         (id (id message))
+         (message-handler (make 'route-discovery-handler :id id :nest nest)))
+    (setf (gethash (id message) (~> nest message-table active-messages)) message-handler)
+    (on-event-loop (nest #.(* 5 60 1000))
+      ;; just remove message handler here
+      (forget-message nest id))
+    (spread-message nest public-key message public-key)))
+
+(defmethod handle-incoming-message :around ((nest nest) connection (message shroud))
+  (validate-shroud (long-term-identity-key nest) message)
+  (call-next-method))
+
+(defmethod handle-incoming-response :around ((nest nest) handler (response shroud) packet connection)
+  (validate-shroud (long-term-identity-key nest) response)
   (call-next-method))

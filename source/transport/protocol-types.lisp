@@ -165,7 +165,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass dead-connection (fundamental-connection)
   ())
 
-(defclass message (pantalea.utils.dependency:dependency-cell)
+(defclass message ()
   ((%hop-counter
     :initarg :hop-counter
     :accessor hop-counter)
@@ -185,6 +185,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :ephemeral-key
     :reader ephemeral-key)
    (%nonce
+    :initarg :nonce
+    :accessor nonce)
+   (%encrypted
+    :initarg :encrypted
+    :accessor encrypted)))
+
+(defclass shroud ()
+  ((%nonce
     :initarg :nonce
     :accessor nonce)
    (%encrypted
@@ -226,7 +234,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :connected-peers
     :reader connected-peers)))
 
-(defclass route-discovery-response (fundamental-response)
+(defclass route-discovery-response (shroud fundamental-response)
   ())
 
 (defclass fundamental-payload ()
@@ -263,3 +271,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :responses
     :accessor responses
     :initform '())))
+
+(defclass foreign-route-discovery-handler (message-handler)
+  ())

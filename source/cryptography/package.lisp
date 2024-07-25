@@ -38,6 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:pkcs7-unpad
    #:long-term-identity-remote-key
    #:make-padded-vector-for-length
+   #:make-25519-private-key
+   #:make-25519-public-key
    #:long-term-identity-key
    #:private
    #:public
